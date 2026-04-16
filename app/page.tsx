@@ -7,9 +7,9 @@ export default function InvitePage() {
 
     const deepLink = `checklin://invite?invId=${invId}`;
 
-    const iosStore = "https://apps.apple.com/app/idYOUR_APP_ID";
+    const iosStore = "https://testflight.apple.com/join/g32XFwX5";
     const androidStore =
-      "https://play.google.com/store/apps/details?id=YOUR_PACKAGE_NAME";
+      "https://play.google.com/apps/internaltest/4701464862425215205";
 
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     const isAndroid = /Android/i.test(navigator.userAgent);
@@ -29,7 +29,7 @@ export default function InvitePage() {
 
   return (
     <div className="flex items-center justify-center h-screen bg-white text-black text-center">
-      <div className="max-w-[400px] p-5">
+      <div className="max-w-100 p-5">
         <h2 className="text-xl font-semibold">Checklin Invitation</h2>
         <p className="mt-2">Tap the button below to open app.</p>
 
