@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.pteshstudios.checklin",
+      "sha256_cert_fingerprints": [
+        "55:45:AB:BE:B9:AC:04:D8:99:D2:2F:F9:24:DC:68:2E:A5:00:02:3A:7E:C3:24:87:D7:0D:97:9B:ED:C8:95:B6"
+      ]
+    }
+  }
+]
