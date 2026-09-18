@@ -62,14 +62,19 @@ export default function DeleteAccountPage() {
 
               <ol className="list-decimal pl-5 space-y-2 text-sm text-muted-foreground leading-6">
                 <li>Open the Checkln mobile app.</li>
-                <li>Sign in to your Checkln account.</li>
-                <li>Open your account or profile settings.</li>
                 <li>
-                  Select <strong>Delete Account</strong>.
+                  Tap the <strong>settings</strong> button in the top right
+                  corner.
                 </li>
                 <li>
-                  Follow the instructions to confirm your account deletion
-                  request.
+                  Scroll down until you see <strong>Delete Account</strong>.
+                </li>
+                <li>
+                  Tap <strong>Delete Account</strong>.
+                </li>
+                <li>
+                  Enter the verification code sent to your email to confirm your
+                  account deletion request.
                 </li>
               </ol>
 
