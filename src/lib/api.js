@@ -1,6 +1,6 @@
 // Base URL for the backend API. Set VITE_API_BASE_URL in your .env file,
 // e.g. VITE_API_BASE_URL=https://api.checkin.app
-const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
+const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ""; 
 
 async function request(path, { method = "GET", body, token } = {}) {
   const headers = { "Content-Type": "application/json" };
