@@ -4,7 +4,7 @@ import { signInWithGoogle, signInWithEmail } from "../lib/api";
 import { saveSession } from "../lib/session";
 import logo from "../assets/logo.png";
 
-const GOOGLE_CLIENT_ID = import.meta.env.GOOGLE_CLIENT_ID;
+const VITE_GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 // --- Inline icon components (brand marks drawn as simple SVGs) ---
 const GoogleIcon = () => (
@@ -89,10 +89,10 @@ export default function CheckInSignIn({ onNext }) {
   // We call google.accounts.id.prompt() ourselves from a normal button's
   // onClick, so there's a real, visible, clickable <button> in the DOM.
   useEffect(() => {
-    if (!GOOGLE_CLIENT_ID) {
+    if (!VITE_GOOGLE_CLIENT_ID) {
       const msg = "Google sign-in is unavailable. Please contact support.";
       console.warn(
-        "Google sign-in is unavailable: GOOGLE_CLIENT_ID is not set. Add it to your .env file and restart the dev server."
+        "Google sign-in is unavailable: VITE_GOOGLE_CLIENT_ID is not set. Add it to your .env file and restart the dev server."
       );
       setError(msg);
       return;
@@ -103,7 +103,7 @@ export default function CheckInSignIn({ onNext }) {
     const initialize = () => {
       if (!window.google?.accounts?.id) return;
       window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
+        client_id: VITE_GOOGLE_CLIENT_ID,
         callback: handleGoogleCredential,
         ux_mode: "popup",
       });

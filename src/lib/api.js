@@ -1,6 +1,6 @@
-// Base URL for the backend API. Set API_BASE_URL in your .env file,
-// e.g. API_BASE_URL=https://api.checkin.app
-const API_BASE_URL = import.meta.env.API_BASE_URL || "";
+// Base URL for the backend API. Set VITE_API_BASE_URL in your .env file,
+// e.g. VITE_API_BASE_URL=https://api.checkin.app
+const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 async function request(path, { method = "GET", body, token } = {}) {
   const headers = { "Content-Type": "application/json" };
@@ -10,7 +10,7 @@ async function request(path, { method = "GET", body, token } = {}) {
 
   let res;
   try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
+    res = await fetch(`${VITE_API_BASE_URL}${path}`, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
