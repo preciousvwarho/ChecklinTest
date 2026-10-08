@@ -4,7 +4,7 @@ import { signInWithGoogle, signInWithEmail } from "../lib/api";
 import { saveSession } from "../lib/session";
 import logo from "../assets/logo.png";
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_ID = import.meta.env.GOOGLE_CLIENT_ID;
 
 // --- Inline icon components (brand marks drawn as simple SVGs) ---
 const GoogleIcon = () => (
@@ -92,7 +92,7 @@ export default function CheckInSignIn({ onNext }) {
     if (!GOOGLE_CLIENT_ID) {
       const msg = "Google sign-in is unavailable. Please contact support.";
       console.warn(
-        "Google sign-in is unavailable: VITE_GOOGLE_CLIENT_ID is not set. Add it to your .env file and restart the dev server."
+        "Google sign-in is unavailable: GOOGLE_CLIENT_ID is not set. Add it to your .env file and restart the dev server."
       );
       setError(msg);
       return;
