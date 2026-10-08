@@ -7,7 +7,6 @@ import { getAuthToken } from "../lib/session";
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thur", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
-// "2026-06-11" -> local Date (avoids UTC shift)
 function parseKey(key) {
   const [y, m, d] = key.split("-").map(Number);
   return new Date(y, m - 1, d);
