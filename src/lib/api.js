@@ -1,7 +1,7 @@
 // Base URL for the backend API. Set API_BASE_URL in your .env file,
 // e.g. API_BASE_URL=https://api.checkin.app
 const API_BASE_URL = import.meta.env.API_BASE_URL || ""; 
-
+ 
 async function request(path, { method = "GET", body, token } = {}) {
   const headers = { "Content-Type": "application/json" };
   if (token) headers.Authorization = `Bearer ${token}`;
