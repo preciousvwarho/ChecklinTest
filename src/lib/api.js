@@ -21,7 +21,7 @@ async function request(path, { method = "GET", body, token } = {}) {
       "Network error. Please check your connection and try again.",
     );
   }
-
+   
   let data = null;
   try {
     data = await res.json();
