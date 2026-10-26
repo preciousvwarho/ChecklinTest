@@ -44,12 +44,12 @@ export default function CheckInPermissionRole({ onNext, onBack }) {
       <style>{`
         * { box-sizing: border-box; }
         .ci-btn { transition: background 0.15s ease, transform 0.05s ease; }
-        .ci-btn:not(:disabled):hover { background: #1691b6 !important; }
+        .ci-btn:not(:disabled):hover { background: #0A74A5 !important; }
         .ci-btn:not(:disabled):active { transform: scale(0.99); }
         .ci-back:hover { background: #f0f2f3 !important; }
         .ci-option { transition: border-color 0.15s ease, background 0.15s ease; cursor: pointer; }
         .ci-option:hover { border-color: #b9c2c9; }
-        .ci-option.selected { border-color: #1CA7D0; background: #f2fafc; }
+        .ci-option.selected { border-color: #0C93CF; background: #F1F9FC; }
 
         @media (max-width: 480px) {
           .ci-card { padding: 32px 20px 0 !important; }
@@ -100,7 +100,7 @@ export default function CheckInPermissionRole({ onNext, onBack }) {
             className="ci-btn"
             style={{
               ...styles.nextBtn,
-              background: isComplete ? "#1CA7D0" : "#d3d8db",
+              background: isComplete ? "#0C93CF" : "#d3d8db",
               cursor: isComplete ? "pointer" : "not-allowed",
             }}
             type="button"
@@ -156,7 +156,7 @@ const styles = {
   },
   progressFill: {
     height: "100%",
-    background: "#1CA7D0",
+    background: "#0C93CF",
     borderRadius: 2,
     transition: "width 0.25s ease",
   },
@@ -205,7 +205,7 @@ const styles = {
     width: 18,
     height: 18,
     borderRadius: "50%",
-    border: "2px solid #1CA7D0",
+    border: "2px solid #0C93CF",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -216,7 +216,7 @@ const styles = {
     width: 9,
     height: 9,
     borderRadius: "50%",
-    background: "#1CA7D0",
+    background: "#0C93CF",
   },
   optionText: {
     flex: 1,

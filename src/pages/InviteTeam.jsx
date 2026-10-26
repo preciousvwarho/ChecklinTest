@@ -34,12 +34,12 @@ export default function CheckInInviteTeam({ companyName = "Ptesh", onNext, onBac
       <style>{`
         * { box-sizing: border-box; }
         .ci-btn { transition: background 0.15s ease, transform 0.05s ease; }
-        .ci-btn:not(:disabled):hover { background: #1691b6 !important; }
+        .ci-btn:not(:disabled):hover { background: #0A74A5 !important; }
         .ci-btn:not(:disabled):active { transform: scale(0.99); }
         .ci-back:hover { background: #f0f2f3 !important; }
         .ci-option-btn { transition: border-color 0.15s ease, background 0.15s ease; }
-        .ci-option-btn.selected { border-color: #1CA7D0; background: #f2fafc; }
-        .ci-checkbox { accent-color: #1CA7D0; }
+        .ci-option-btn.selected { border-color: #0C93CF; background: #F1F9FC; }
+        .ci-checkbox { accent-color: #0C93CF; }
 
         @media (max-width: 480px) {
           .ci-card { padding: 32px 20px 0 !important; }
@@ -59,7 +59,7 @@ export default function CheckInInviteTeam({ companyName = "Ptesh", onNext, onBac
               className="ci-option-btn selected"
               style={{ ...styles.optionBtn, ...styles.optionBtnSelected }}
             >
-              <Mail size={16} color="#1CA7D0" />
+              <Mail size={16} color="#0C93CF" />
               <span>Add by email</span>
             </button>
           </div>
@@ -68,7 +68,7 @@ export default function CheckInInviteTeam({ companyName = "Ptesh", onNext, onBac
             className="ci-btn"
             style={{
               ...styles.nextBtn,
-              background: isComplete ? "#1CA7D0" : "#d3d8db",
+              background: isComplete ? "#0C93CF" : "#d3d8db",
               cursor: isComplete ? "pointer" : "not-allowed",
             }}
             type="button"
@@ -138,7 +138,7 @@ const styles = {
   },
   progressFill: {
     height: "100%",
-    background: "#1CA7D0",
+    background: "#0C93CF",
     borderRadius: 2,
     transition: "width 0.25s ease",
   },
@@ -190,9 +190,9 @@ const styles = {
     cursor: "pointer",
   },
   optionBtnSelected: {
-    border: "1.5px solid #1CA7D0",
-    background: "#f2fafc",
-    color: "#1CA7D0",
+    border: "1.5px solid #0C93CF",
+    background: "#F1F9FC",
+    color: "#0C93CF",
   },
   nextBtn: {
     width: "100%",

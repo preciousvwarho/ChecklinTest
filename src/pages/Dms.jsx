@@ -77,14 +77,14 @@ const STYLES = `
   }
   .ci-dm-row:last-child { border-bottom: none; }
   .ci-dm-row:hover { background: #f9fbfc; }
-  .ci-dm-avatar { width: 34px; height: 34px; border-radius: 50%; background: #cfeaf6; flex-shrink: 0; }
+  .ci-dm-avatar { width: 34px; height: 34px; border-radius: 50%; background: #C5E5F4; flex-shrink: 0; }
   .ci-dm-row-body { flex: 1; min-width: 0; }
   .ci-dm-name { font-size: 13.5px; font-weight: 700; color: #141b1f; }
   .ci-dm-preview { font-size: 11.5px; color: #8a97a0; margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ci-dm-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
   .ci-dm-time { font-size: 11px; color: #9aa4aa; }
   .ci-dm-badge {
-    min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #bfe3f2; color: #0f6f8f;
+    min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #9FD4EC; color: #0C93CF;
     font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;
   }
   .ci-dm-empty { font-size: 13.5px; color: #9aa4aa; padding: 20px 0; }
@@ -101,31 +101,31 @@ const STYLES = `
   .ci-msg.them { align-self: flex-start; align-items: flex-start; }
   .ci-bubble { padding: 14px 16px; border-radius: 18px; font-size: 12.5px; line-height: 1.55; word-break: break-word; }
   .ci-msg.them .ci-bubble { background: #e6e7e8; color: #2b3338; border-bottom-left-radius: 6px; }
-  .ci-msg.me .ci-bubble { background: #1CA7D0; color: #fff; border-bottom-right-radius: 6px; }
+  .ci-msg.me .ci-bubble { background: #0C93CF; color: #fff; border-bottom-right-radius: 6px; }
   .ci-msg-time { font-size: 10.5px; color: #9aa4aa; margin-top: 6px; }
   .ci-file {
-    display: flex; align-items: center; gap: 10px; background: #e3f1fb; border-radius: 10px; padding: 10px 12px; min-width: 200px;
+    display: flex; align-items: center; gap: 10px; background: #E7F4FA; border-radius: 10px; padding: 10px 12px; min-width: 200px;
   }
   .ci-file-info { flex: 1; min-width: 0; }
   .ci-file-name { font-size: 11.5px; font-weight: 700; color: #141b1f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ci-file-size { font-size: 10px; color: #8a97a0; margin-top: 2px; }
-  .ci-file-dl { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid #1CA7D0; display: flex; align-items: center; justify-content: center; color: #1CA7D0; background: none; cursor: pointer; padding: 0; flex-shrink: 0; }
+  .ci-file-dl { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid #0C93CF; display: flex; align-items: center; justify-content: center; color: #0C93CF; background: none; cursor: pointer; padding: 0; flex-shrink: 0; }
   .ci-img { max-width: 260px; width: 100%; border-radius: 4px; display: block; }
 
   .ci-composer { display: flex; align-items: center; gap: 10px; padding: 14px 28px 24px; border-top: 1px solid #eef0f1; flex-shrink: 0; }
   .ci-composer-attach { border: none; background: none; cursor: pointer; color: #8a97a0; padding: 6px; display: flex; }
-  .ci-composer-attach:hover { color: #1CA7D0; }
+  .ci-composer-attach:hover { color: #0C93CF; }
   .ci-composer-input { flex: 1; border: 1px solid #dfe3e6; border-radius: 999px; padding: 12px 18px; font-size: 13px; outline: none; font-family: inherit; color: #141b1f; }
-  .ci-composer-input:focus { border-color: #1CA7D0; box-shadow: 0 0 0 3px rgba(28,167,208,0.12); }
-  .ci-composer-send { width: 40px; height: 40px; border-radius: 50%; border: none; background: #1CA7D0; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .ci-composer-input:focus { border-color: #0C93CF; box-shadow: 0 0 0 3px rgba(12,147,207,0.12); }
+  .ci-composer-send { width: 40px; height: 40px; border-radius: 50%; border: none; background: #0C93CF; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
   .ci-composer-send:disabled { background: #eceef0; color: #8a97a0; cursor: not-allowed; }
 
 
   .ci-dm-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
   .ci-dm-head .ci-dm-title { margin: 0; }
-  .ci-dm-new { border: none; background: #1CA7D0; color: #fff; font-size: 12.5px; font-weight: 700; border-radius: 999px; padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: inherit; }
-  .ci-dm-new:hover { background: #1691b6; }
-  .ci-dm-avatar { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #0f6f8f; }
+  .ci-dm-new { border: none; background: #0C93CF; color: #fff; font-size: 12.5px; font-weight: 700; border-radius: 999px; padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-family: inherit; }
+  .ci-dm-new:hover { background: #0A74A5; }
+  .ci-dm-avatar { display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #0C93CF; }
   .ci-dm-error { font-size: 12.5px; color: #d64545; padding: 8px 0; }
   .ci-dm-overlay { position: fixed; inset: 0; background: rgba(20,27,31,0.45); display: flex; align-items: center; justify-content: center; z-index: 80; padding: 16px; }
   .ci-dm-modal { background: #fff; border-radius: 18px; width: 100%; max-width: 420px; max-height: 80vh; display: flex; flex-direction: column; padding: 20px 20px 12px; }

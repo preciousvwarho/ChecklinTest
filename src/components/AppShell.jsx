@@ -6,9 +6,9 @@ import { getAuthToken, getSession, saveSession, getActiveOrgId, setActiveOrgId }
 
 export const CloudPinLogo = ({ size = 26 }) => (
   <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M18 40a11 11 0 01-1-21.9A15 15 0 0146.5 22 10 10 0 0146 42H18z" fill="#1CA7D0" />
-    <path d="M32 20c-5 0-9 4-9 9 0 6.8 9 15 9 15s9-8.2 9-15c0-5-4-9-9-9z" fill="#ffffff" stroke="#1CA7D0" strokeWidth="2.5" />
-    <circle cx="32" cy="29" r="3.2" fill="#1CA7D0" />
+    <path d="M18 40a11 11 0 01-1-21.9A15 15 0 0146.5 22 10 10 0 0146 42H18z" fill="#0C93CF" />
+    <path d="M32 20c-5 0-9 4-9 9 0 6.8 9 15 9 15s9-8.2 9-15c0-5-4-9-9-9z" fill="#ffffff" stroke="#0C93CF" strokeWidth="2.5" />
+    <circle cx="32" cy="29" r="3.2" fill="#0C93CF" />
   </svg>
 );
 
@@ -126,7 +126,7 @@ export default function AppShell({ activeNavId, onNavChange, children, modal }) 
           flex-direction: column;
           min-height: 100vh;
           width: 100%;
-          background: #f6f7f8;
+          background: #fff;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
 
@@ -134,11 +134,17 @@ export default function AppShell({ activeNavId, onNavChange, children, modal }) 
 
         /* ---------- sidebar ---------- */
         .ci-sidebar {
-          width: 280px; height: 100vh; background: #ffffff; display: flex; flex-direction: column;
+          width: 280px; height: 100vh; border-right: 1px solid #E9E9E9; background: #ffffff; display: flex; flex-direction: column;
           flex-shrink: 0; position: fixed; top: 0; left: 0; z-index: 40;
         }
         .ci-sidebar-scroll {
-          flex: 1; padding: 20px 18px 0; overflow-y: auto; background: #1CA7D0; border-bottom-right-radius: 20px;
+          flex: 1; padding: 20px 18px 0; overflow-y: auto; background: #0C93CF; border-bottom-right-radius: 20px;
+          direction: rtl;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255,255,255,0.35) transparent;
+        }
+        .ci-sidebar-scroll > * {
+          direction: ltr;
         }
         .ci-org-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
         .ci-org-header-title { color: #fff; font-size: 15px; font-weight: 700; }
@@ -167,7 +173,7 @@ export default function AppShell({ activeNavId, onNavChange, children, modal }) 
           transition: background 0.15s ease; cursor: pointer;
         }
         .ci-nav-item:hover { background: #f0f2f3; }
-        .ci-nav-item.active { background: #eaf6fa; color: #1CA7D0; }
+        .ci-nav-item.active { background: #E7F4FA; color: #0C93CF; }
         .ci-profile-row {
           display: flex; align-items: center; gap: 10px; padding: 16px 12px 10px;
           border-top: 1px solid #eef0f1; margin-top: 6px;
@@ -178,7 +184,7 @@ export default function AppShell({ activeNavId, onNavChange, children, modal }) 
         .ci-profile-email { font-size: 11px; color: #8a97a0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .ci-create-org {
           display: flex; align-items: center; gap: 6px; background: none; border: none;
-          color: #1CA7D0; font-size: 12.5px; font-weight: 700; padding: 10px 12px 0; cursor: pointer;
+          color: #0C93CF; font-size: 12.5px; font-weight: 700; padding: 10px 12px 0; cursor: pointer;
         }
         .ci-create-org:hover { text-decoration: underline; }
 
@@ -189,7 +195,7 @@ export default function AppShell({ activeNavId, onNavChange, children, modal }) 
         }
         .ci-mobile-brand { display: flex; align-items: center; gap: 6px; }
         .ci-mobile-brand-text { font-size: 15px; font-weight: 700; color: #141b1f; }
-        .ci-mobile-brand-accent { color: #1CA7D0; }
+        .ci-mobile-brand-accent { color: #0C93CF; }
         .ci-menu-btn {
           display: flex; align-items: center; justify-content: center; width: 34px; height: 34px;
           border-radius: 8px; border: 1px solid #eef0f1; background: #fff; cursor: pointer; flex-shrink: 0;
@@ -202,7 +208,7 @@ export default function AppShell({ activeNavId, onNavChange, children, modal }) 
         /* ================= RESPONSIVE ================= */
         @media (max-width: 860px) {
           .ci-sidebar { transform: translateX(-100%); transition: transform 0.25s ease; }
-          .ci-sidebar.open { transform: translateX(0); }
+          .ci-sidebar.open { transform: translateX(0); background-color: white; }
           .ci-main { margin-left: 0; }
           .ci-mobile-topbar { display: flex; }
         }
@@ -256,7 +262,7 @@ export default function AppShell({ activeNavId, onNavChange, children, modal }) 
                   role="button"
                   tabIndex={0}
                 >
-                  <Icon size={17} color={isActive ? "#1CA7D0" : "#5b6870"} />
+                  <Icon size={17} color={isActive ? "#0C93CF" : "#5b6870"} />
                   <span>{item.label}</span>
                 </div>
               );
@@ -267,7 +273,7 @@ export default function AppShell({ activeNavId, onNavChange, children, modal }) 
             {user.avatarUrl && !avatarBroken ? (
               <img src={user.avatarUrl} alt="" className="ci-avatar" onError={() => setAvatarBroken(true)} />
             ) : (
-              <span className="ci-avatar" style={{ background: "#cfeaf6", color: "#25303a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>
+              <span className="ci-avatar" style={{ background: "#C5E5F4", color: "#25303a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>
                 {initials}
               </span>
             )}

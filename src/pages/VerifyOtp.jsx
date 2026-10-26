@@ -134,11 +134,11 @@ export default function CheckInVerifyOtp({ email, resendAt, resendDelaySeconds, 
       <style>{`
         * { box-sizing: border-box; }
         .ci-otp-box { transition: border-color 0.15s ease, box-shadow 0.15s ease; }
-        .ci-otp-box:focus { border-color: #1CA7D0 !important; box-shadow: 0 0 0 3px rgba(28,167,208,0.15); outline: none; }
+        .ci-otp-box:focus { border-color: #0C93CF !important; box-shadow: 0 0 0 3px rgba(12,147,207,0.15); outline: none; }
         .ci-resend:hover:not(.disabled) { text-decoration: underline; }
         .ci-resend.disabled { color: #b6bec3 !important; cursor: not-allowed; pointer-events: none; }
         .ci-verify-btn { transition: background 0.15s ease, transform 0.05s ease; }
-        .ci-verify-btn:not(:disabled):hover { background: #1691b6 !important; }
+        .ci-verify-btn:not(:disabled):hover { background: #0A74A5 !important; }
         .ci-verify-btn:not(:disabled):active { transform: scale(0.99); }
 
         @media (max-width: 480px) {
@@ -215,7 +215,7 @@ export default function CheckInVerifyOtp({ email, resendAt, resendDelaySeconds, 
             className="ci-verify-btn"
             style={{
               ...styles.verifyBtn,
-              background: isComplete && !verifying ? "#1CA7D0" : "#d3d8db",
+              background: isComplete && !verifying ? "#0C93CF" : "#d3d8db",
               cursor: isComplete && !verifying ? "pointer" : "not-allowed",
             }}
             type="button"
@@ -277,7 +277,7 @@ const styles = {
     marginBottom: 22,
   },
   brandAccent: {
-    color: "#1CA7D0",
+    color: "#0C93CF",
   },
   heading: {
     fontSize: 17,
@@ -324,7 +324,7 @@ const styles = {
     margin: 0,
   },
   resendLink: {
-    color: "#1CA7D0",
+    color: "#0C93CF",
     fontWeight: 600,
     textDecoration: "none",
   },

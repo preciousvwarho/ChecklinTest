@@ -65,7 +65,7 @@ const STYLES = `
   .ci-th-scroll { flex: 1; min-height: 0; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 4px; }
   .ci-th-state { font-size: 13px; color: #9aa4aa; text-align: center; padding: 24px 0; }
   .ci-th-error { font-size: 12px; color: #d64545; text-align: center; padding: 8px 0; }
-  .ci-th-more { align-self: center; border: 1px solid #dfe3e6; background: #fff; color: #1CA7D0; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 6px 14px; cursor: pointer; margin-bottom: 10px; font-family: inherit; }
+  .ci-th-more { align-self: center; border: 1px solid #dfe3e6; background: #fff; color: #0C93CF; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 6px 14px; cursor: pointer; margin-bottom: 10px; font-family: inherit; }
   .ci-th-more:disabled { opacity: 0.6; cursor: default; }
   .ci-th-day { align-self: center; font-size: 10.5px; color: #9aa4aa; background: #f3f5f6; border-radius: 999px; padding: 4px 12px; margin: 14px 0 8px; }
   .ci-th-msg { display: flex; flex-direction: column; max-width: 72%; margin-top: 10px; }
@@ -77,11 +77,11 @@ const STYLES = `
   .ci-th-msg.me .ci-th-row { flex-direction: row-reverse; }
   .ci-th-bubble { padding: 10px 14px; border-radius: 16px; font-size: 12.5px; line-height: 1.5; word-break: break-word; white-space: pre-wrap; }
   .ci-th-msg.them .ci-th-bubble { background: #eceeef; color: #2b3338; border-bottom-left-radius: 5px; }
-  .ci-th-msg.me .ci-th-bubble { background: #1CA7D0; color: #fff; border-bottom-right-radius: 5px; }
+  .ci-th-msg.me .ci-th-bubble { background: #0C93CF; color: #fff; border-bottom-right-radius: 5px; }
   .ci-th-bubble.deleted { background: transparent !important; border: 1px dashed #d5dadd; color: #9aa4aa !important; font-style: italic; }
   .ci-th-bubble.failed { background: #fdecec !important; color: #b53a3a !important; }
   .ci-th-bubble.sending { opacity: 0.6; }
-  .ci-th-quote { font-size: 11px; border-left: 3px solid rgba(28,167,208,0.6); background: rgba(0,0,0,0.05); border-radius: 6px; padding: 5px 8px; margin-bottom: 6px; opacity: 0.9; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ci-th-quote { font-size: 11px; border-left: 3px solid rgba(12,147,207,0.6); background: rgba(0,0,0,0.05); border-radius: 6px; padding: 5px 8px; margin-bottom: 6px; opacity: 0.9; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ci-th-msg.me .ci-th-quote { background: rgba(255,255,255,0.18); border-left-color: rgba(255,255,255,0.7); }
   .ci-th-actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.12s ease; }
   .ci-th-msg:hover .ci-th-actions, .ci-th-actions:focus-within { opacity: 1; }
@@ -89,27 +89,27 @@ const STYLES = `
   .ci-th-act:hover { background: #f1f3f4; color: #141b1f; }
   .ci-th-meta { font-size: 10px; color: #9aa4aa; margin: 4px 4px 0; display: flex; gap: 6px; }
   .ci-th-retry { border: none; background: none; color: #d64545; font-size: 10px; font-weight: 700; cursor: pointer; padding: 0; font-family: inherit; }
-  .ci-th-file { display: flex; align-items: center; gap: 10px; background: #e3f1fb; border-radius: 10px; padding: 10px 12px; min-width: 200px; margin-top: 4px; }
+  .ci-th-file { display: flex; align-items: center; gap: 10px; background: #E7F4FA; border-radius: 10px; padding: 10px 12px; min-width: 200px; margin-top: 4px; }
   .ci-th-file-info { flex: 1; min-width: 0; }
   .ci-th-file-name { font-size: 11.5px; font-weight: 700; color: #141b1f; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ci-th-file-size { font-size: 10px; color: #8a97a0; margin-top: 2px; }
-  .ci-th-file-dl { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid #1CA7D0; display: flex; align-items: center; justify-content: center; color: #1CA7D0; flex-shrink: 0; }
+  .ci-th-file-dl { width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid #0C93CF; display: flex; align-items: center; justify-content: center; color: #0C93CF; flex-shrink: 0; }
   .ci-th-img { max-width: 240px; width: 100%; border-radius: 10px; display: block; margin-top: 4px; }
-  .ci-th-checkin { background: #f1f9fc; border: 1px solid #cfeaf6; color: #141b1f; border-radius: 12px; padding: 10px 12px; margin-top: 4px; font-size: 12px; min-width: 200px; }
-  .ci-th-checkin-title { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #0f6f8f; margin-bottom: 4px; }
+  .ci-th-checkin { background: #F1F9FC; border: 1px solid #C5E5F4; color: #141b1f; border-radius: 12px; padding: 10px 12px; margin-top: 4px; font-size: 12px; min-width: 200px; }
+  .ci-th-checkin-title { display: flex; align-items: center; gap: 6px; font-weight: 700; color: #0C93CF; margin-bottom: 4px; }
   .ci-th-checkin-line { color: #4a565d; margin-top: 2px; }
   .ci-th-replybar { display: flex; align-items: center; gap: 10px; padding: 8px 20px; border-top: 1px solid #eef0f1; background: #f9fbfc; font-size: 11.5px; color: #4a565d; }
   .ci-th-replybar-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ci-th-composer { display: flex; align-items: center; gap: 10px; padding: 12px 20px 16px; border-top: 1px solid #eef0f1; background: #fff; flex-shrink: 0; }
   .ci-th-input { flex: 1; border: 1px solid #dfe3e6; border-radius: 999px; padding: 11px 18px; font-size: 13px; outline: none; font-family: inherit; color: #141b1f; }
-  .ci-th-input:focus { border-color: #1CA7D0; box-shadow: 0 0 0 3px rgba(28,167,208,0.12); }
+  .ci-th-input:focus { border-color: #0C93CF; box-shadow: 0 0 0 3px rgba(12,147,207,0.12); }
   .ci-th-attach { width: 36px; height: 36px; border: none; background: none; color: #6b7680; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; padding: 0; }
-  .ci-th-attach:hover { background: #f1f3f4; color: #1CA7D0; }
+  .ci-th-attach:hover { background: #f1f3f4; color: #0C93CF; }
   .ci-th-staged { display: flex; gap: 8px; padding: 10px 20px 0; border-top: 1px solid #eef0f1; flex-wrap: wrap; }
   .ci-th-staged-item { position: relative; width: 56px; height: 56px; }
   .ci-th-staged-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; display: block; }
   .ci-th-staged-item button { position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; border: none; background: #141b1f; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
-  .ci-th-send { width: 38px; height: 38px; border-radius: 50%; border: none; background: #1CA7D0; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .ci-th-send { width: 38px; height: 38px; border-radius: 50%; border: none; background: #0C93CF; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
   .ci-th-send:disabled { background: #eceef0; color: #8a97a0; cursor: not-allowed; }
   @media (max-width: 640px) {
     .ci-th-scroll { padding: 16px 14px; }
@@ -410,7 +410,7 @@ export default function ChatThread({
                     </a>
                   ) : (
                     <div key={a.id} className="ci-th-file">
-                      <FileText size={18} color="#1CA7D0" />
+                      <FileText size={18} color="#0C93CF" />
                       <div className="ci-th-file-info">
                         <div className="ci-th-file-name">{a.fileName}</div>
                         <div className="ci-th-file-size">{formatSize(a.fileSize)}</div>

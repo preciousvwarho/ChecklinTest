@@ -3,7 +3,7 @@ import {
   MoreVertical,
   Pencil,
   Trash2,
-  MessageSquare,
+  MessagesSquare,
   Paperclip,
   Plus,
   ArrowLeft,
@@ -11,6 +11,7 @@ import {
   Search,
   Calendar,
 } from "lucide-react";
+
 import AppShell from "../components/AppShell";
 import ChatThread from "../components/ChatThread";
 import DailyCheckInModal from "../components/DailyCheckInModal";
@@ -38,7 +39,28 @@ const TABS = [
 // board card / task detail route render. The swagger doc doesn't spell out
 // every field name, so this is deliberately defensive — adjust the
 // fallbacks below once the real response shape is confirmed.
+// The tasks response doesn't always name the member list the same way:
+// try the likely names first, then scan every array on the task for one that
+// looks like a list of people (or a list of user IDs under a member-ish key).
+const NON_MEMBER_KEYS = /comment|attach|file|tag|label|subtask|checklist|activit|histor/i;
+const MEMBER_KEYS = /member|assign|user|participant|owner/i;
+const looksLikePerson = (x) => {
+  const o = x && typeof x === "object" ? x.user || x : null;
+  return !!(o && (o.email || o.firstName || o.fullName || o.name || o.imageUrl || o.avatar || o.profileImage));
+};
+function pickMembers(t) {
+  const named = [t.teamMembers, t.members, t.assignees, t.assignedTo, t.assignedUsers, t.users, t.participants];
+  for (const list of named) if (Array.isArray(list) && list.length) return list;
+  for (const [key, v] of Object.entries(t)) {
+    if (!Array.isArray(v) || !v.length || NON_MEMBER_KEYS.test(key)) continue;
+    if (v.every(looksLikePerson)) return v;
+    if (MEMBER_KEYS.test(key) && v.every((x) => typeof x === "string")) return v;
+  }
+  return [];
+}
+
 function toBoardTask(t) {
+  const memberList = pickMembers(t);
   const statusLabel = { PENDING: "Pending", IN_PROGRESS: "In progress", COMPLETED: "Completed" }[t.status] || t.status || "Pending";
   const percent = t.percent ?? t.progress ?? (t.status === "COMPLETED" ? 100 : t.status === "IN_PROGRESS" ? 50 : 0);
   const formatDate = (d) => (d ? new Date(d).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : null);
@@ -62,7 +84,8 @@ function toBoardTask(t) {
     rawStatus: t.status,
     startDate: t.startDate,
     endDate: t.endDate,
-    members: t.teamMembers || [],
+    members: memberList,
+    memberCount: t.teamMembersCount ?? t.membersCount ?? t.assigneesCount ?? memberList.length,
   };
 }
 
@@ -123,14 +146,27 @@ function describeArc(cx, cy, r, startAngle, endAngle) {
 }
 const GAUGE_START = -135;
 const GAUGE_SWEEP = 270;
+const GAUGE_R = 32.8; // mid-radius; with stroke-width 14.4 the ring spans r 25.6 → 40
 
 const memberAvatar = (m, i) =>
-  m?.imageUrl || m?.avatar || m?.user?.imageUrl || `https://i.pravatar.cc/40?u=${m?.id || m?.userId || i}`;
+  m?.avatar ||
+  m?.imageUrl ||
+  m?.user?.imageUrl ||
+  (m && typeof m === "object" ? personImage(m) : null) ||
+  `https://i.pravatar.cc/40?u=${m?.id || m?.userId || i}`;
 
-function TaskCard({ task, onClick }) {
+function TaskCard({ task, teamMembers = [], onClick }) {
   const members = task.members || [];
-  const shownMembers = members.slice(0, 3);
-  const extraCount = members.length - shownMembers.length;
+  // Task members may come back as plain user IDs or as objects — resolve them
+  // against the project team so each avatar uses the member's real image.
+  const resolved = members.map((m) => {
+    const id = typeof m === "string" ? m : m?.userId || m?.user?.id || m?.id;
+    const match = teamMembers.find((tm) => tm.userId === id || tm.id === id);
+    if (match) return { id: match.userId, avatar: match.avatar };
+    return typeof m === "string" ? { id: m } : m;
+  });
+  const shownMembers = resolved.slice(0, 3);
+  const totalCount = task.memberCount ?? members.length;
 
   return (
     <div
@@ -146,6 +182,7 @@ function TaskCard({ task, onClick }) {
       }}
     >
       <div className="ci-task-title">{task.title}</div>
+
       <div className="ci-task-progress-row">
         <span className="ci-task-progress-label">Progress Bar</span>
         <span className="ci-task-progress-percent">{task.progressText}</span>
@@ -153,22 +190,28 @@ function TaskCard({ task, onClick }) {
       <div className="ci-task-track">
         <div className="ci-task-fill" style={{ width: `${task.percent}%` }} />
       </div>
+
       <div className="ci-task-date">{task.dateRange}</div>
+
+      <div className="ci-task-divider" />
+
       <div className="ci-task-footer">
         <div className="ci-task-avatars">
           {shownMembers.map((m, i) => (
             <img key={m?.id || m?.userId || i} src={memberAvatar(m, i)} alt="" className="ci-task-avatar" />
           ))}
-          {extraCount > 0 && <span className="ci-task-avatar-more">+{extraCount}</span>}
+          {totalCount > 0 && <span className="ci-task-avatar-more">+{totalCount}</span>}
         </div>
-        <span className="ci-task-meta">
-          <MessageSquare size={13} />
-          {task.comments}
-        </span>
-        <span className="ci-task-meta">
-          <Paperclip size={13} />
-          {task.files}
-        </span>
+        <div className="ci-task-meta-group">
+          <span className="ci-task-meta">
+            <MessagesSquare size={24} strokeWidth={1.8} color="#000" />
+            {task.comments}
+          </span>
+          <span className="ci-task-meta">
+            <Paperclip size={20} strokeWidth={2} color="#000" />
+            {task.files}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -233,6 +276,7 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
             return null;
           }),
         ]);
+        console.log("[ProjectDetail] raw task sample:", tasksResult.data?.[0]);
         setTasks((tasksResult.data || []).map(toBoardTask));
         setTeamMembers((membersResult?.data || []).map(toTeamMember));
         // analyticsResult.data = { overview, data: [weekly cards], pageData }
@@ -431,18 +475,15 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
 
   // ---- analytics tab, from GET /v1/projects/analytics/overview ----
   const analyticsProductivity = analytics?.productivity ?? 0;
-  const analyticsGaugeTrack = describeArc(50, 50, 40, GAUGE_START, GAUGE_START + GAUGE_SWEEP);
-  // A 0% arc has zero length and some browsers render a dot, so skip drawing it.
-  const analyticsGaugeProgress =
-    analyticsProductivity > 0
-      ? describeArc(50, 50, 40, GAUGE_START, GAUGE_START + (GAUGE_SWEEP * analyticsProductivity) / 100)
-      : "";
-  const analyticsChange = analytics?.change;
+  // Solid light ring (no progress overlay) to match the design.
+  const analyticsGaugeTrack = describeArc(50, 50, GAUGE_R, GAUGE_START, GAUGE_START + GAUGE_SWEEP);
   const analyticsEntries = analytics?.entries || [];
 
   return (
     <AppShell>
       <style>{`
+        @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap");
+
         .ci-main-inner { display: flex; align-items: flex-start; gap: 32px; padding: 32px 40px 60px; }
         .ci-board { flex: 1; min-width: 0; }
 
@@ -453,7 +494,7 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
           border-radius: 8px; border: 1px solid #eef0f1; background: #fff; color: #141b1f; cursor: pointer; flex-shrink: 0;
         }
         .ci-back-btn:hover { background: #f5f6f7; }
-        .ci-board-title { font-size: 28px; font-weight: 800; color: #141b1f; margin: 0; letter-spacing: -0.3px; }
+        .ci-board-title { font-size: 28px; font-weight: 500; color: #141b1f; margin: 0; letter-spacing: -0.3px; }
         .ci-board-actions { display: flex; align-items: center; gap: 6px; }
         .ci-icon-btn-ghost {
           display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;
@@ -469,24 +510,24 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
         }
         .ci-tab.active { color: #141b1f; }
         .ci-tab.active::after {
-          content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2.5px; background: #1CA7D0; border-radius: 2px;
+          content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2.5px; background: #0C93CF; border-radius: 2px;
         }
 
         /* ---------- blue stat card ---------- */
         .ci-stat-card {
-          background: linear-gradient(120deg, #25A9CE 0%, #1CA7D0 55%, #1798bd 100%);
-          border-radius: 14px; padding: 28px 30px; display: flex; align-items: center;
+          background: linear-gradient(120deg, #2B8CB8 0%, #0C93CF 55%, #0C93CF 100%);
+          border-radius: 14px; padding: 50px 30px; display: flex; align-items: center;
           gap: 22px; margin-bottom: 26px;
         }
         .ci-stat-left { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .ci-stat-percent { color: #fff; font-size: 32px; font-weight: 800; line-height: 1; }
+        .ci-stat-percent { color: #fff; font-size: 32px; font-weight: 500; line-height: 1; }
         .ci-stat-pill {
-          display: inline-block; color: #fff; font-size: 10.5px; font-weight: 600; border: 1px solid rgba(255,255,255,0.55);
+          display: inline-block; color: #fff; font-size: 10.5px; font-weight: 500; border: 1px solid rgba(255,255,255,0.55);
           border-radius: 999px; padding: 4px 14px;
         }
         .ci-stat-divider { width: 1px; align-self: stretch; background: rgba(255,255,255,0.45); }
         .ci-stat-text { flex: 1; text-align: left; }
-        .ci-stat-headline { color: #fff; font-size: 16px; font-weight: 700; margin-bottom: 6px; line-height: 1.35; }
+        .ci-stat-headline { color: #fff; font-size: 16px; font-weight: 500; margin-bottom: 6px; line-height: 1.35; }
         .ci-stat-subline { color: rgba(255,255,255,0.85); font-size: 12.5px; }
 
         /* ---------- task cards ---------- */
@@ -495,48 +536,51 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
         .ci-task-section-title { font-size: 13px; font-weight: 700; color: #141b1f; }
         .ci-task-section-add {
           display: flex; align-items: center; justify-content: center; width: 24px; height: 24px;
-          border-radius: 7px; border: 1px solid #dfe3e6; background: #fff; color: #1CA7D0; cursor: pointer;
+          border-radius: 7px; border: 1px solid #dfe3e6; background: #fff; color: #0C93CF; cursor: pointer;
         }
-        .ci-task-section-add:hover { background: #eaf6fa; }
+        .ci-task-section-add:hover { background: #E7F4FA; }
         .ci-tasks-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
         .ci-task-card {
-          border: none; border-radius: 14px; padding: 18px 18px 16px; background: #F8FAFB;
-          cursor: pointer; transition: box-shadow 0.15s ease, background 0.15s ease;
+          border: none; border-radius: 24px; padding: 28px 26px 24px; background: #F5F9FF;
+          cursor: pointer; transition: box-shadow 0.15s ease;
         }
-        .ci-task-card:hover { box-shadow: 0 4px 14px rgba(16,24,32,0.08); background: #f2f5f7; }
-        .ci-task-title { font-size: 14.5px; font-weight: 700; color: #141b1f; margin-bottom: 12px; }
-        .ci-task-progress-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-        .ci-task-progress-label { font-size: 10.5px; color: #9aa4aa; }
-        .ci-task-progress-percent { font-size: 10.5px; color: #9aa4aa; font-weight: 600; }
-        .ci-task-track { height: 5px; border-radius: 999px; background: #e4e8ea; margin-bottom: 12px; overflow: hidden; }
-        .ci-task-fill { height: 100%; border-radius: 999px; background: #1CA7D0; }
+        .ci-task-card:hover { box-shadow: 0 4px 14px rgba(16,24,32,0.08); }
+        .ci-task-title { font-size: 18px; font-weight: 400; color: #000; margin-bottom: 15px; line-height: 1.1; }
+        .ci-task-progress-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .ci-task-progress-label { font-size: 15px; color: #6b7280; }
+        .ci-task-progress-percent { font-size: 15px; color: #6b7280; }
+        .ci-task-track { height: 5px; background: #d1d1d1; margin-bottom: 22px; overflow: hidden; }
+        .ci-task-fill { height: 100%; background: #0C93CF; }
         .ci-task-date {
-          display: inline-block; font-size: 11px; color: #9aa4aa; border: 1px solid #e4e8ea;
-          background: #fff; border-radius: 999px; padding: 4px 14px; margin-bottom: 14px;
+          display: inline-block; font-size: 15px; color: #6b7280; border: 1.5px solid #a3a9b8;
+          background: transparent; border-radius: 999px; padding: 7px 18px 7px 54px; margin-bottom: 22px;
         }
-        .ci-task-footer { display: flex; align-items: center; gap: 14px; }
+        .ci-task-divider { height: 1px; background: #d1d3d8; margin-bottom: 22px; }
+        .ci-task-footer { display: flex; align-items: center; justify-content: space-between; }
         .ci-task-avatars { display: flex; align-items: center; }
         .ci-task-avatar {
-          width: 24px; height: 24px; border-radius: 50%; object-fit: cover;
-          border: 2px solid #F8FAFB; margin-left: -7px;
+          width: 30px; height: 30px; border-radius: 50%; object-fit: cover;
+          background: #d6f0ff; margin-left: -21px;
         }
         .ci-task-avatar:first-child { margin-left: 0; }
         .ci-task-avatar-more {
-          display: flex; align-items: center; justify-content: center; width: 24px; height: 24px;
-          border-radius: 50%; background: #BEE3F2; color: #fff; font-size: 9.5px; font-weight: 700;
-          border: 2px solid #F8FAFB; margin-left: -7px;
+          display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;
+          border-radius: 50%; background: #0C93CF; color: #fff; font-size: 16px; font-weight: 400;
+          margin-left: -21px; position: relative;
         }
-        .ci-task-meta { display: flex; align-items: center; gap: 4px; font-size: 11px; color: #9aa4aa; font-weight: 600; }
+        .ci-task-avatar-more:first-child { margin-left: 0; }
+        .ci-task-meta-group { display: flex; align-items: center; gap: 36px; }
+        .ci-task-meta { display: flex; align-items: center; gap: 12px; font-size: 16px; color: #6b7280; font-weight: 400; }
 
         /* ---------- team rail ---------- */
         .ci-team-rail { width: 230px; flex-shrink: 0; }
         .ci-team-heading { font-size: 12px; color: #6b7680; margin-bottom: 12px; line-height: 1.4; }
         .ci-invite-btn {
-          display: inline-flex; align-items: center; gap: 4px; background: #fff; color: #1CA7D0;
-          border: 1px solid #BEE3F2; border-radius: 999px; font-size: 11px; font-weight: 700;
+          display: inline-flex; align-items: center; gap: 4px; background: #fff; color: #0C93CF;
+          border: 1px solid #9FD4EC; border-radius: 999px; font-size: 11px; font-weight: 700;
           padding: 6px 14px; cursor: pointer; margin-bottom: 14px;
         }
-        .ci-invite-btn:hover { background: #eaf6fa; }
+        .ci-invite-btn:hover { background: #E7F4FA; }
         .ci-team-member { display: flex; align-items: center; gap: 10px; padding: 8px 6px; border-radius: 10px; position: relative; }
         .ci-team-member:hover { background: #f6f7f8; }
         .ci-team-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
@@ -557,11 +601,11 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
 
         .ci-fab {
           position: fixed; right: 36px; bottom: 36px; width: 54px; height: 54px; border-radius: 50%;
-          background: #1CA7D0; border: none; display: flex; align-items: center; justify-content: center;
-          cursor: pointer; box-shadow: 0 8px 18px rgba(28,167,208,0.4); z-index: 15;
+          background: #0C93CF; border: none; display: flex; align-items: center; justify-content: center;
+          cursor: pointer; box-shadow: 0 8px 18px rgba(12,147,207,0.4); z-index: 15;
           transition: background 0.15s ease, transform 0.1s ease;
         }
-        .ci-fab:hover { background: #1691b6; transform: scale(1.05); }
+        .ci-fab:hover { background: #0A74A5; transform: scale(1.05); }
 
         /* ---------- add team member modal ---------- */
         .ci-modal-overlay {
@@ -583,7 +627,7 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
           display: flex; align-items: center; gap: 8px; border: 1px solid #dfe3e6; border-radius: 10px;
           padding: 10px 14px; margin-bottom: 20px;
         }
-        .ci-coworker-search:focus-within { border-color: #1CA7D0; box-shadow: 0 0 0 3px rgba(28,167,208,0.12); }
+        .ci-coworker-search:focus-within { border-color: #0C93CF; box-shadow: 0 0 0 3px rgba(12,147,207,0.12); }
         .ci-coworker-search-input { flex: 1; border: none; outline: none; font-size: 13px; color: #141b1f; background: transparent; }
         .ci-coworker-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px 12px; }
         .ci-coworker-card {
@@ -592,12 +636,12 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
         }
         .ci-coworker-card:hover { background: #f6f7f8; }
         .ci-coworker-avatar {
-          width: 56px; height: 56px; border-radius: 50%; background: #cdeaf3; color: #0d6f8f;
+          width: 56px; height: 56px; border-radius: 50%; background: #C5E5F4; color: #0C93CF;
           display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700;
         }
         .ci-coworker-name { font-size: 12.5px; font-weight: 600; color: #141b1f; text-align: center; }
         .ci-coworker-tag {
-          font-size: 10px; font-weight: 700; color: #1CA7D0; background: #eaf6fa; border-radius: 999px;
+          font-size: 10px; font-weight: 700; color: #0C93CF; background: #E7F4FA; border-radius: 999px;
           padding: 2px 10px;
         }
         .ci-coworker-tag.added { color: #1e9e63; background: #e7f7ee; }
@@ -614,14 +658,14 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
         .ci-chat-bubble {
           max-width: 320px; padding: 10px 14px; border-radius: 14px; font-size: 12.5px; line-height: 1.5;
         }
-        .ci-chat-bubble.me { background: #1CA7D0; color: #fff; border-bottom-right-radius: 4px; }
+        .ci-chat-bubble.me { background: #0C93CF; color: #fff; border-bottom-right-radius: 4px; }
         .ci-chat-bubble.other { background: #f1f3f4; color: #141b1f; border-bottom-left-radius: 4px; }
         .ci-chat-time { font-size: 10px; color: #b0b8bd; margin-top: 4px; }
         .ci-chat-time.me { text-align: right; }
         .ci-chat-time.other { text-align: left; }
         .ci-chat-image { width: 160px; border-radius: 12px; display: block; object-fit: cover; }
         .ci-chat-pending {
-          display: flex; align-items: center; gap: 8px; background: #1CA7D0; color: #fff; font-size: 12px;
+          display: flex; align-items: center; gap: 8px; background: #0C93CF; color: #fff; font-size: 12px;
           font-weight: 600; padding: 8px 14px; border-radius: 999px;
         }
         .ci-chat-spinner {
@@ -640,10 +684,9 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
         .ci-chat-input { flex: 1; border: none; outline: none; font-size: 13px; color: #141b1f; background: transparent; padding: 6px 4px; }
         .ci-chat-send-btn {
           display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border-radius: 50%;
-          background: #1CA7D0; border: none; cursor: pointer; flex-shrink: 0; transition: background 0.15s ease;
+          background: #0C93CF; border: none; cursor: pointer; flex-shrink: 0; transition: background 0.15s ease;
         }
-        .ci-chat-send-btn:hover { background: #1691b6; }
-
+        .ci-chat-send-btn:hover { background: #0A74A5; }
         @media (max-width: 640px) {
           .ci-chat { height: 60vh; }
           .ci-chat-bubble { max-width: 220px; }
@@ -651,30 +694,27 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
 
         /* ---------- analytics tab ---------- */
         .ci-analytics-overview {
-          background: linear-gradient(180deg, #22ADD4 0%, #189ac1 100%);
-          border-radius: 20px; padding: 26px 28px 28px;
-          display: flex; flex-direction: column; align-items: center; margin-bottom: 16px;
+          background: #0D94D1;
+          border-radius: 32px;
+          padding: 28px 32px 20px;
+          min-height: 0;
+          box-sizing: border-box;
+          display: flex; flex-direction: column; align-items: center;
+          margin-bottom: 16px;
+          font-family: "Poppins", sans-serif;
         }
         .ci-analytics-overview-text { align-self: flex-start; text-align: left; }
-        .ci-analytics-overview-title { color: #fff; font-size: 17px; font-weight: 700; margin-bottom: 4px; }
-        .ci-analytics-overview-range { color: rgba(255,255,255,0.8); font-size: 12.5px; min-height: 16px; }
-        .ci-analytics-gauge { position: relative; width: 176px; max-width: 62%; margin-top: 14px; }
-        .ci-analytics-gauge svg { width: 100%; height: auto; display: block; }
-        .ci-analytics-gauge-track { fill: none; stroke: rgba(255,255,255,0.3); stroke-width: 9; stroke-linecap: round; }
-        .ci-analytics-gauge-progress { fill: none; stroke: #fff; stroke-width: 9; stroke-linecap: round; }
+        .ci-analytics-overview-title { color: #fff; font-size: 20px; font-weight: 500; line-height: 1.2; }
+        .ci-analytics-overview-range { color: #fff; font-size: 14px; font-weight: 400; margin-top: 4px; min-height: 24px; }
+        .ci-analytics-gauge { position: relative; width: 100%; max-width: 200px; margin: -30px auto -35px; }
+        .ci-analytics-gauge svg { width: 100%; height: auto; display: block; margin: 0 auto; }
+        .ci-analytics-gauge-track { fill: none; stroke: #EEF8FF; stroke-width: 14.4; stroke-linecap: butt; }
         .ci-analytics-gauge-center {
-          position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+          position: absolute; inset: 0; padding-top: 8px;
           display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .ci-analytics-gauge-value { color: #fff; font-size: 24px; font-weight: 800; line-height: 1.1; }
-        .ci-analytics-gauge-label { color: rgba(255,255,255,0.85); font-size: 11.5px; margin-top: 2px; }
-        .ci-analytics-change {
-          color: #fff; font-size: 11.5px; font-weight: 600; background: rgba(255,255,255,0.2);
-          border-radius: 999px; padding: 3px 12px; margin-top: 10px;
-        }
-        .ci-analytics-remark { align-self: flex-start; text-align: left; margin-top: 18px; }
-        .ci-analytics-remark-title { color: #fff; font-size: 14px; font-weight: 700; margin-bottom: 2px; }
-        .ci-analytics-remark-text { color: rgba(255,255,255,0.85); font-size: 12.5px; line-height: 1.5; }
+        .ci-analytics-gauge-value { color: #fff; font-size: 18px; font-weight: 400; line-height: 1.1; }
+        .ci-analytics-gauge-label { color: #fff; font-size: 12px; font-weight: 400; margin-top: 2px; }
 
         .ci-analytics-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 12px; }
         .ci-analytics-metric {
@@ -687,19 +727,22 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
         .ci-analytics-section-title { font-size: 13px; font-weight: 700; color: #141b1f; margin-bottom: 12px; }
         .ci-analytics-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
         .ci-analytics-stat-card {
-          border: none; background: #EEF3FB; border-radius: 16px; padding: 22px 16px 22px;
+          border: none; background: #E7F4FA; border-radius: 16px; padding: 22px 16px 22px;
           display: flex; flex-direction: column; align-items: center; text-align: center; min-height: 108px;
           justify-content: space-between; gap: 6px; font-family: inherit; cursor: pointer;
         }
-        .ci-analytics-stat-card:hover { background: #E4ECF8; }
+        .ci-analytics-stat-card:hover { background: #D5E6EE; }
         .ci-analytics-stat-date { font-size: 14px; font-weight: 700; color: #141b1f; }
         .ci-analytics-stat-range { font-size: 11px; color: #9aa4aa; }
-        .ci-analytics-stat-score { font-size: 11px; font-weight: 700; color: #1CA7D0; }
+        .ci-analytics-stat-score { font-size: 11px; font-weight: 700; color: #0C93CF; }
         .ci-analytics-error { color: #e05555; font-size: 12.5px; margin-bottom: 16px; }
         .ci-analytics-empty { color: #9aa4aa; font-size: 12.5px; }
 
         @media (max-width: 640px) {
           .ci-analytics-stats { grid-template-columns: 1fr; }
+          .ci-analytics-overview { border-radius: 24px; padding: 20px 18px 16px; }
+          .ci-analytics-overview-range { font-size: 16px; }
+          .ci-analytics-gauge { width: 100%; max-width: 220px; margin: 0 auto; }
         }
 
         /* ---------- create task modal ---------- */
@@ -716,7 +759,7 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
           font-size: 13.5px; color: #141b1f; font-family: inherit; outline: none;
         }
         .ci-field-input:focus, .ci-field-textarea:focus, .ci-date-box:focus-within {
-          border-color: #1CA7D0; box-shadow: 0 0 0 3px rgba(28,167,208,0.12);
+          border-color: #0C93CF; box-shadow: 0 0 0 3px rgba(12,147,207,0.12);
         }
         .ci-field-textarea { min-height: 80px; resize: vertical; }
         .ci-date-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -726,22 +769,22 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
         .ci-date-input { border: none; outline: none; font-size: 12.5px; color: #141b1f; flex: 1; font-family: inherit; min-width: 0; }
         .ci-member-input-row { display: flex; gap: 6px; }
         .ci-member-add-btn {
-          border: 1px solid #dfe3e6; border-radius: 9px; background: #fff; color: #1CA7D0; font-weight: 700;
+          border: 1px solid #dfe3e6; border-radius: 9px; background: #fff; color: #0C93CF; font-weight: 700;
           font-size: 12.5px; padding: 0 14px; cursor: pointer; flex-shrink: 0;
         }
-        .ci-member-add-btn:hover { background: #eaf6fa; }
+        .ci-member-add-btn:hover { background: #E7F4FA; }
         .ci-member-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
         .ci-member-chip {
-          display: flex; align-items: center; gap: 6px; background: #eaf6fa; color: #0d6f8f; font-size: 11.5px;
+          display: flex; align-items: center; gap: 6px; background: #E7F4FA; color: #0C93CF; font-size: 11.5px;
           font-weight: 600; padding: 5px 10px; border-radius: 999px;
         }
-        .ci-member-chip button { background: none; border: none; color: #0d6f8f; cursor: pointer; display: flex; }
+        .ci-member-chip button { background: none; border: none; color: #0C93CF; cursor: pointer; display: flex; }
         .ci-task-modal-create-btn {
           width: 100%; border: none; border-radius: 9px; padding: 12px 0; font-size: 15px; font-weight: 600; margin-top: 4px;
         }
 
         @media (max-width: 860px) {
-          .ci-main-inner { flex-direction: column; padding: 24px 20px 48px; gap: 24px; }
+          .ci-main-inner { flex-direction: column; width:100%; padding: 24px 20px 48px; gap: 24px; }
           .ci-team-rail { width: 100%; }
         }
         @media (max-width: 640px) {
@@ -749,6 +792,12 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
           .ci-stat-card { flex-direction: column; align-items: flex-start; }
           .ci-stat-divider { display: none; }
           .ci-board-title { font-size: 22px; }
+          .ci-task-card { padding: 22px 20px 20px; }
+          .ci-task-title { font-size: 24px; margin-bottom: 20px; }
+          .ci-task-date { padding-left: 44px; }
+          .ci-task-avatar, .ci-task-avatar-more { width: 40px; height: 40px; margin-left: -18px; }
+          .ci-task-avatar:first-child { margin-left: 0; }
+          .ci-task-meta-group { gap: 22px; }
         }
       `}</style>
 
@@ -822,7 +871,7 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
                     {tasks
                       .filter((t) => t.section === section)
                       .map((task) => (
-                        <TaskCard key={task.id} task={task} onClick={() => onOpenTask?.(task)} />
+                        <TaskCard key={task.id} task={task} teamMembers={teamMembers} onClick={() => onOpenTask?.(task)} />
                       ))}
                   </div>
                 </div>
@@ -860,25 +909,12 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
                 <div className="ci-analytics-gauge">
                   <svg viewBox="0 0 100 100">
                     <path d={analyticsGaugeTrack} className="ci-analytics-gauge-track" />
-                    {analyticsGaugeProgress && <path d={analyticsGaugeProgress} className="ci-analytics-gauge-progress" />}
                   </svg>
                   <div className="ci-analytics-gauge-center">
                     <span className="ci-analytics-gauge-value">{analyticsProductivity}%</span>
                     <span className="ci-analytics-gauge-label">Productivity</span>
                   </div>
                 </div>
-                {analyticsChange !== null && analyticsChange !== undefined && (
-                  <span className="ci-analytics-change">
-                    {analyticsChange > 0 ? "+" : ""}
-                    {analyticsChange}% vs last period
-                  </span>
-                )}
-                {(analytics?.remarkTitle || analytics?.remark) && (
-                  <div className="ci-analytics-remark">
-                    {analytics.remarkTitle && <div className="ci-analytics-remark-title">{analytics.remarkTitle}</div>}
-                    {analytics.remark && <div className="ci-analytics-remark-text">{analytics.remark}</div>}
-                  </div>
-                )}
               </div>
 
               {analytics && (
@@ -901,7 +937,7 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
                 </>
               )}
 
-              {analyticsEntries.length > 0 && <div className="ci-analytics-section-title">Weekly reports</div>}
+              {/* {analyticsEntries.length > 0 && <div className="ci-analytics-section-title">Weekly reports</div>} */}
               <div className="ci-analytics-stats">
                 {analyticsEntries.map((entry, i) => (
                   <button
@@ -1033,7 +1069,7 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
               type="button"
               disabled={inviteEmails.length === 0 || invitingTeam}
               style={{
-                background: inviteEmails.length ? "#1CA7D0" : "#eceef0",
+                background: inviteEmails.length ? "#0C93CF" : "#eceef0",
                 color: inviteEmails.length ? "#fff" : "#8a97a0",
                 cursor: inviteEmails.length && !invitingTeam ? "pointer" : "not-allowed",
               }}
@@ -1151,7 +1187,7 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
               type="button"
               disabled={!canCreateTask || creatingTask}
               style={{
-                background: canCreateTask ? "#1CA7D0" : "#eceef0",
+                background: canCreateTask ? "#0C93CF" : "#eceef0",
                 color: canCreateTask ? "#fff" : "#8a97a0",
                 cursor: canCreateTask && !creatingTask ? "pointer" : "not-allowed",
               }}

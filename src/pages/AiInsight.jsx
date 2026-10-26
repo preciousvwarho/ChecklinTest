@@ -1,34 +1,101 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import AppShell from "../components/AppShell";
+import { getAnalyticsInsight } from "../lib/api";
+import { getAuthToken } from "../lib/session";
 
-const STATS = [
-  { id: "productivity", label: "Productivity", value: "78%" },
-  { id: "tasks", label: "Tasks Completed", value: "12" },
-  { id: "checkin", label: "Check-in Row", value: "8%" },
-];
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-const RECOMMENDATIONS = [
-  "Developer HomeScreen QA Backend: Validate User Add and Remove API Endpoints.",
-  "Developer HomeScreen QA Backend: Validate User Add and Remove API Endpoints.",
-];
+const ordinal = (n) => {
+  const v = n % 100;
+  if (v >= 11 && v <= 13) return `${n}th`;
+  return `${n}${["th", "st", "nd", "rd"][n % 10] || "th"}`;
+};
 
-const FOCUS_AREAS = [
-  { id: 1, day: "04", month: "Dec", title: "Develop HomeScreen", dateRange: "20th Aug - 25 Aug 2025", status: "Overdue" },
-  { id: 2, day: "04", month: "Dec", title: "Develop HomeScreen", dateRange: "20th Aug - 25 Aug 2026", status: "In Progress" },
-];
+const parseDate = (iso) => {
+  const d = iso ? new Date(iso) : null;
+  return d && !Number.isNaN(d.getTime()) ? d : null;
+};
 
-export default function CheckInAiInsight({ onBack, onGoHome }) {
+const formatRange = (start, end) => {
+  const a = parseDate(start);
+  const b = parseDate(end);
+  if (!a || !b) return "";
+  const left = `${ordinal(a.getDate())} ${MONTHS[a.getMonth()]}`;
+  return `${left} - ${ordinal(b.getDate())} ${MONTHS[b.getMonth()]} ${b.getFullYear()}`;
+};
+
+const STATUS = {
+  OVERDUE: { label: "Overdue", cls: "overdue" },
+  IN_PROGRESS: { label: "In Progress", cls: "in-progress" },
+  PENDING: { label: "Pending", cls: "pending" },
+  PENDING_COMPLETION_APPROVAL: { label: "Awaiting Approval", cls: "pending" },
+  COMPLETED: { label: "Completed", cls: "completed" },
+};
+
+const statusOf = (status) =>
+  STATUS[status] || {
+    label: String(status || "").replace(/_/g, " ").toLowerCase().replace(/^\w/, (c) => c.toUpperCase()),
+    cls: "pending",
+  };
+
+const pct = (n) => (n === null || n === undefined ? "—" : `${n}%`);
+
+export default function CheckInAiInsight({ analyticsId, projectId, onBack, onGoHome }) {
+  const [insight, setInsight] = useState(null);
+  const [loading, setLoading] = useState(Boolean(analyticsId && projectId));
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!analyticsId || !projectId) {
+      setLoading(false);
+      setInsight(null);
+      return undefined;
+    }
+    let cancelled = false;
+    setLoading(true);
+    setError("");
+    getAnalyticsInsight({ analyticsId, projectId, token: getAuthToken() })
+      .then((res) => {
+        if (!cancelled) setInsight(res?.data || null);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.message || "Couldn't load this insight.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [analyticsId, projectId]);
+
+  const metrics = insight?.metrics || {};
+  const stats = [
+    { id: "productivity", label: "Productivity", value: pct(metrics.productivity?.value) },
+    { id: "tasks", label: "Tasks Completed", value: metrics.tasksCompleted?.value ?? "—" },
+    { id: "checkin", label: "Check-in Row", value: pct(metrics.checkInRow?.value) },
+  ];
+  const recommendations = insight?.recommendations || [];
+  const focusAreas = insight?.focusAreas || [];
+  const insightNotes = insight?.insights || [];
+
+  let message = "";
+  if (!analyticsId || !projectId) message = "No insight selected. Open one from the Analytics tab of a project.";
+  else if (loading) message = "Loading insight…";
+  else if (error) message = error;
+  else if (!insight) message = "No insight available for this week yet.";
+
   return (
     <AppShell>
       <style>{`
-        .ci-insight-hero { background: #eef4fb; padding: 28px 40px 26px; }
+        .ci-insight-hero { background: #E7F4FA; padding: 28px 40px 26px; }
         .ci-insight-back {
           display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;
           border-radius: 8px; border: 1px solid #dbe4ee; background: #fff; color: #141b1f; cursor: pointer; margin-bottom: 16px;
         }
         .ci-insight-back:hover { background: #f5f8fb; }
-        .ci-insight-title { font-size: 24px; font-weight: 800; color: #141b1f; margin: 0 0 4px; }
+        .ci-insight-title { font-size: 24px; font-weight: 500; color: #141b1f; margin: 0 0 4px; }
         .ci-insight-range { font-size: 12.5px; color: #6b7680; margin-bottom: 20px; }
         .ci-insight-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
         .ci-insight-stat-card { background: #fff; border-radius: 14px; padding: 14px 16px; }
@@ -60,6 +127,13 @@ export default function CheckInAiInsight({ onBack, onGoHome }) {
         }
         .ci-focus-status.overdue { background: #e05555; }
         .ci-focus-status.in-progress { background: #f0a93a; }
+        .ci-focus-status.pending { background: #9aa4aa; }
+        .ci-focus-status.completed { background: #1e9e63; }
+        .ci-insight-message { padding: 40px; font-size: 13.5px; color: #6b7680; }
+        .ci-insight-message.error { color: #d64545; }
+        .ci-reco-desc { display: block; font-size: 12px; color: #6b7680; }
+        .ci-insight-notes { margin: -12px 0 24px; padding-left: 18px; }
+        .ci-insight-notes li { font-size: 13px; color: #6b7680; line-height: 1.6; }
 
         @media (max-width: 640px) {
           .ci-insight-hero { padding: 22px 20px 20px; }
@@ -75,52 +149,79 @@ export default function CheckInAiInsight({ onBack, onGoHome }) {
           </button>
         )}
         <h1 className="ci-insight-title">Ai Insight</h1>
-        <div className="ci-insight-range">3rd April to 9th April 2026</div>
+        <div className="ci-insight-range">{insight?.period?.label || ""}</div>
 
         <div className="ci-insight-stats">
-          {STATS.map((s) => (
-            <div key={s.id} className="ci-insight-stat-card">
-              <div className="ci-insight-stat-label">{s.label}</div>
-              <div className="ci-insight-stat-value">{s.value}</div>
+          {stats.map((st) => (
+            <div key={st.id} className="ci-insight-stat-card">
+              <div className="ci-insight-stat-label">{st.label}</div>
+              <div className="ci-insight-stat-value">{insight ? st.value : "—"}</div>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="ci-insight-body">
-        <p className="ci-insight-summary">
-          Based on the todos assigned to you, your productivity was above average. You can do better.
-        </p>
+      {message ? (
+        <div className={`ci-insight-message${error ? " error" : ""}`}>{message}</div>
+      ) : (
+        <div className="ci-insight-body">
+          {insight.remark && <p className="ci-insight-summary">{insight.remark}</p>}
+          {insightNotes.length > 0 && (
+            <ul className="ci-insight-notes">
+              {insightNotes.map((n, i) => (
+                <li key={i}>{n}</li>
+              ))}
+            </ul>
+          )}
 
-        <h2 className="ci-insight-section-title">Task analysis</h2>
-        <p className="ci-insight-section-text">3 task at risk of being over. 4 task are already overdue.</p>
+          <h2 className="ci-insight-section-title">Task analysis</h2>
+          <p className="ci-insight-section-text">{insight.taskAnalysis?.summary || "No task analysis available."}</p>
 
-        <h2 className="ci-insight-section-title">Recommendations</h2>
-        <ol className="ci-insight-reco-list">
-          {RECOMMENDATIONS.map((r, i) => (
-            <li key={i}>{r}</li>
-          ))}
-        </ol>
+          <h2 className="ci-insight-section-title">Recommendations</h2>
+          {recommendations.length ? (
+            <ol className="ci-insight-reco-list">
+              {recommendations.map((r, i) => {
+                const item = typeof r === "string" ? { title: r } : r;
+                return (
+                  <li key={item.index ?? i}>
+                    {item.title}
+                    {item.description && item.description !== item.title && (
+                      <span className="ci-reco-desc">{item.description}</span>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
+            <p className="ci-insight-section-text">No recommendations this week.</p>
+          )}
 
-        <h2 className="ci-insight-section-title">Focus Areas</h2>
-        <div className="ci-focus-list">
-          {FOCUS_AREAS.map((f) => (
-            <div key={f.id} className="ci-focus-card">
-              <div className="ci-focus-date">
-                <span className="ci-focus-day">{f.day}</span>
-                <span className="ci-focus-month">{f.month}</span>
-              </div>
-              <div className="ci-focus-info">
-                <div className="ci-focus-title">{f.title}</div>
-                <div className="ci-focus-range">{f.dateRange}</div>
-              </div>
-              <span className={`ci-focus-status ${f.status === "Overdue" ? "overdue" : "in-progress"}`}>
-                {f.status}
-              </span>
+          <h2 className="ci-insight-section-title">Focus Areas</h2>
+          {focusAreas.length ? (
+            <div className="ci-focus-list">
+              {focusAreas.map((f) => {
+                const due = parseDate(f.endDate);
+                const st = statusOf(f.status);
+                return (
+                  <div key={f.id} className="ci-focus-card">
+                    <div className="ci-focus-date">
+                      <span className="ci-focus-day">{due ? String(due.getDate()).padStart(2, "0") : "--"}</span>
+                      <span className="ci-focus-month">{due ? MONTHS[due.getMonth()] : ""}</span>
+                    </div>
+                    <div className="ci-focus-info">
+                      <div className="ci-focus-title">{f.title}</div>
+                      <div className="ci-focus-range">{formatRange(f.startDate, f.endDate)}</div>
+                    </div>
+                    <span className={`ci-focus-status ${st.cls}`}>{st.label}</span>
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          ) : (
+            <p className="ci-insight-section-text">No focus areas this week.</p>
+          )}
         </div>
-      </div>
+      )}
     </AppShell>
   );
 }

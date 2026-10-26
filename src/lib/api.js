@@ -1,6 +1,6 @@
 // Base URL for the backend API. Set VITE_API_BASE_URL in your .env file,
 // e.g. VITE_API_BASE_URL=https://api.checkin.app
-const VITE_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || ""; 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 
 async function request(path, { method = "GET", body, token } = {}) {
   const headers = { "Content-Type": "application/json" };
@@ -10,16 +10,14 @@ async function request(path, { method = "GET", body, token } = {}) {
 
   let res;
   try {
-    res = await fetch(`${VITE_API_BASE_URL}${path}`, {
+    res = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch (networkErr) {
     console.error(`[api] ${method} ${path} network error:`, networkErr);
-    throw new Error(
-      "Network error. Please check your connection and try again.",
-    );
+    throw new Error("Network error. Please check your connection and try again.");
   }
 
   let data = null;
@@ -35,12 +33,12 @@ async function request(path, { method = "GET", body, token } = {}) {
     const details = Array.isArray(data?.errors)
       ? data.errors.map((e) => e.message || JSON.stringify(e)).join("; ")
       : data?.errors
-        ? JSON.stringify(data.errors)
-        : null;
-    const message =
-      [data?.message, details].filter(Boolean).join(" — ") ||
-      `Request failed (${res.status})`;
-    throw new Error(message);
+      ? JSON.stringify(data.errors)
+      : null;
+    const message = [data?.message, details].filter(Boolean).join(" — ") || `Request failed (${res.status})`;
+    const err = new Error(message);
+    err.status = res.status;
+    throw err;
   }
 
   return data;
@@ -145,21 +143,12 @@ export function createOrganization({ name, imageKey, token }) {
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: {id: string, name: string, ...}, message: string}>}
  */
-export function createProject({
-  organizationId,
-  name,
-  description,
-  checkInTime,
-  token,
-}) {
-  return request(
-    `/v1/projects?organizationId=${encodeURIComponent(organizationId)}`,
-    {
-      method: "POST",
-      body: { name, description, checkInTime },
-      token,
-    },
-  );
+export function createProject({ organizationId, name, description, checkInTime, token }) {
+  return request(`/v1/projects?organizationId=${encodeURIComponent(organizationId)}`, {
+    method: "POST",
+    body: { name, description, checkInTime },
+    token,
+  });
 }
 
 /**
@@ -212,25 +201,15 @@ export function getOrganizations({ token }) {
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: {invitationSentTo: string[]}, message: string}>}
  */
-const APP_URL = (
-  import.meta.env.VITE_APP_URL || window.location.origin
-).replace(/\/$/, "");
+const APP_URL = (import.meta.env.VITE_APP_URL || window.location.origin).replace(/\/$/, "");
 
-export function inviteTeamMembers({
-  organizationId,
-  emails,
-  url = `${APP_URL}/invite`,
-  token,
-}) {
+export function inviteTeamMembers({ organizationId, emails, url = `${APP_URL}/invite`, token }) {
   console.log("[api] invitation url being sent to backend:", url);
-  return request(
-    `/v1/organization/team/invitation?organizationId=${encodeURIComponent(organizationId)}`,
-    {
-      method: "POST",
-      body: { teamMembers: emails.map((email) => ({ email })), url },
-      token,
-    },
-  );
+  return request(`/v1/organization/team/invitation?organizationId=${encodeURIComponent(organizationId)}`, {
+    method: "POST",
+    body: { teamMembers: emails.map((email) => ({ email })), url },
+    token,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -248,13 +227,7 @@ export function inviteTeamMembers({
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: object, message: string}>}
  */
-export function updateProject({
-  projectId,
-  name,
-  description,
-  checkInTime,
-  token,
-}) {
+export function updateProject({ projectId, name, description, checkInTime, token }) {
   return request(`/v1/projects/${encodeURIComponent(projectId)}`, {
     method: "PATCH",
     body: { name, description, checkInTime },
@@ -273,9 +246,7 @@ export function updateProject({
  * @returns {Promise<{status: string, data: object, message: string}>}
  */
 export function getProject({ projectId, organizationId, token }) {
-  const query = organizationId
-    ? `?organizationId=${encodeURIComponent(organizationId)}`
-    : "";
+  const query = organizationId ? `?organizationId=${encodeURIComponent(organizationId)}` : "";
   return request(`/v1/projects/${encodeURIComponent(projectId)}${query}`, {
     method: "GET",
     token,
@@ -308,19 +279,8 @@ export function deleteProject({ projectId, token }) {
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: object[], pageData: object, message: string}>}
  */
-export function searchProjects({
-  organizationId,
-  q,
-  page = 1,
-  limit = 20,
-  token,
-}) {
-  const query = new URLSearchParams({
-    organizationId,
-    q,
-    page: String(page),
-    limit: String(limit),
-  });
+export function searchProjects({ organizationId, q, page = 1, limit = 20, token }) {
+  const query = new URLSearchParams({ organizationId, q, page: String(page), limit: String(limit) });
   return request(`/v1/projects/search?${query.toString()}`, {
     method: "GET",
     token,
@@ -342,12 +302,7 @@ export function searchProjects({
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, message: string}>}
  */
-export function addProjectMembers({
-  organizationId,
-  projectId,
-  teamMembers,
-  token,
-}) {
+export function addProjectMembers({ organizationId, projectId, teamMembers, token }) {
   const query = new URLSearchParams({ organizationId, projectId });
   return request(`/v1/projects/members?${query.toString()}`, {
     method: "POST",
@@ -386,14 +341,11 @@ export function getProjectMembers({ organizationId, projectId, token }) {
  */
 export function updateProjectMember({ memberId, projectId, roleId, token }) {
   const query = new URLSearchParams({ projectId });
-  return request(
-    `/v1/projects/members/${encodeURIComponent(memberId)}?${query.toString()}`,
-    {
-      method: "PATCH",
-      body: { roleId },
-      token,
-    },
-  );
+  return request(`/v1/projects/members/${encodeURIComponent(memberId)}?${query.toString()}`, {
+    method: "PATCH",
+    body: { roleId },
+    token,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -413,23 +365,12 @@ export function updateProjectMember({ memberId, projectId, roleId, token }) {
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: object, message: string}>}
  */
-export function createTask({
-  projectId,
-  title,
-  description,
-  startDate,
-  endDate,
-  teamMembers = [],
-  token,
-}) {
-  return request(
-    `/v1/projects/tasks?projectId=${encodeURIComponent(projectId)}`,
-    {
-      method: "POST",
-      body: { title, description, startDate, endDate, teamMembers },
-      token,
-    },
-  );
+export function createTask({ projectId, title, description, startDate, endDate, teamMembers = [], token }) {
+  return request(`/v1/projects/tasks?projectId=${encodeURIComponent(projectId)}`, {
+    method: "POST",
+    body: { title, description, startDate, endDate, teamMembers },
+    token,
+  });
 }
 
 /**
@@ -443,19 +384,8 @@ export function createTask({
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: object[], pageData: object, message: string}>}
  */
-export function getTasks({
-  projectId,
-  page = 1,
-  limit = 50,
-  taskScope = "assigned",
-  token,
-}) {
-  const query = new URLSearchParams({
-    projectId,
-    page: String(page),
-    limit: String(limit),
-    taskScope,
-  });
+export function getTasks({ projectId, page = 1, limit = 50, taskScope = "assigned", token }) {
+  const query = new URLSearchParams({ projectId, page: String(page), limit: String(limit), taskScope });
   return request(`/v1/projects/tasks?${query.toString()}`, {
     method: "GET",
     token,
@@ -473,13 +403,10 @@ export function getTasks({
  * @returns {Promise<{status: string, data: object[], message: string}>}
  */
 export function getOngoingTasks({ projectId, token }) {
-  return request(
-    `/v1/projects/tasks/ongoing?projectId=${encodeURIComponent(projectId)}`,
-    {
-      method: "GET",
-      token,
-    },
-  );
+  return request(`/v1/projects/tasks/ongoing?projectId=${encodeURIComponent(projectId)}`, {
+    method: "GET",
+    token,
+  });
 }
 
 /**
@@ -495,15 +422,7 @@ export function getOngoingTasks({ projectId, token }) {
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: object, message: string}>}
  */
-export function updateTask({
-  taskId,
-  title,
-  description,
-  startDate,
-  endDate,
-  teamMembers,
-  token,
-}) {
+export function updateTask({ taskId, title, description, startDate, endDate, teamMembers, token }) {
   return request(`/v1/projects/tasks/${encodeURIComponent(taskId)}`, {
     method: "PATCH",
     body: { title, description, startDate, endDate, teamMembers },
@@ -538,13 +457,10 @@ export function getTask({ taskId, projectId, token }) {
  * @returns {Promise<{status: string, message: string}>}
  */
 export function deleteTask({ taskId, projectId, token }) {
-  return request(
-    `/v1/projects/tasks/${encodeURIComponent(taskId)}?projectId=${encodeURIComponent(projectId)}`,
-    {
-      method: "DELETE",
-      token,
-    },
-  );
+  return request(`/v1/projects/tasks/${encodeURIComponent(taskId)}?projectId=${encodeURIComponent(projectId)}`, {
+    method: "DELETE",
+    token,
+  });
 }
 
 /**
@@ -578,25 +494,12 @@ export function updateTaskStatus({ taskId, status, token }) {
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: object[], pageData: object, message: string}>}
  */
-export function getTaskWorkLogs({
-  taskId,
-  projectId,
-  page = 1,
-  limit = 20,
-  token,
-}) {
-  const query = new URLSearchParams({
-    projectId,
-    page: String(page),
-    limit: String(limit),
+export function getTaskWorkLogs({ taskId, projectId, page = 1, limit = 20, token }) {
+  const query = new URLSearchParams({ projectId, page: String(page), limit: String(limit) });
+  return request(`/v1/projects/tasks/${encodeURIComponent(taskId)}/work-logs?${query.toString()}`, {
+    method: "GET",
+    token,
   });
-  return request(
-    `/v1/projects/tasks/${encodeURIComponent(taskId)}/work-logs?${query.toString()}`,
-    {
-      method: "GET",
-      token,
-    },
-  );
 }
 
 // ---------------------------------------------------------------------------
@@ -616,24 +519,14 @@ export function getTaskWorkLogs({
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: object, message: string}>}
  */
-export function createTaskComment({
-  taskId,
-  projectId,
-  content,
-  attachments = [],
-  parentId,
-  token,
-}) {
+export function createTaskComment({ taskId, projectId, content, attachments = [], parentId, token }) {
   const body = { content, attachments };
   if (parentId) body.parentId = parentId;
-  return request(
-    `/v1/projects/tasks/${encodeURIComponent(taskId)}/comments?projectId=${encodeURIComponent(projectId)}`,
-    {
-      method: "POST",
-      body,
-      token,
-    },
-  );
+  return request(`/v1/projects/tasks/${encodeURIComponent(taskId)}/comments?projectId=${encodeURIComponent(projectId)}`, {
+    method: "POST",
+    body,
+    token,
+  });
 }
 
 /**
@@ -649,27 +542,13 @@ export function createTaskComment({
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: object[], pageData: object, message: string}>}
  */
-export function getTaskComments({
-  taskId,
-  projectId,
-  page = 1,
-  limit = 20,
-  parentId,
-  token,
-}) {
-  const query = new URLSearchParams({
-    projectId,
-    page: String(page),
-    limit: String(limit),
-  });
+export function getTaskComments({ taskId, projectId, page = 1, limit = 20, parentId, token }) {
+  const query = new URLSearchParams({ projectId, page: String(page), limit: String(limit) });
   if (parentId) query.set("parentId", parentId);
-  return request(
-    `/v1/projects/tasks/${encodeURIComponent(taskId)}/comments?${query.toString()}`,
-    {
-      method: "GET",
-      token,
-    },
-  );
+  return request(`/v1/projects/tasks/${encodeURIComponent(taskId)}/comments?${query.toString()}`, {
+    method: "GET",
+    token,
+  });
 }
 
 /**
@@ -682,13 +561,10 @@ export function getTaskComments({
  * @returns {Promise<{status: string, message: string}>}
  */
 export function deleteTaskComment({ taskId, commentId, token }) {
-  return request(
-    `/v1/projects/tasks/${encodeURIComponent(taskId)}/comments/${encodeURIComponent(commentId)}`,
-    {
-      method: "DELETE",
-      token,
-    },
-  );
+  return request(`/v1/projects/tasks/${encodeURIComponent(taskId)}/comments/${encodeURIComponent(commentId)}`, {
+    method: "DELETE",
+    token,
+  });
 }
 
 /**
@@ -703,20 +579,12 @@ export function deleteTaskComment({ taskId, commentId, token }) {
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: object, message: string}>}
  */
-export function createTaskThoughtProcess({
-  taskId,
-  projectId,
-  content,
-  token,
-}) {
-  return request(
-    `/v1/projects/tasks/${encodeURIComponent(taskId)}/thought-process?projectId=${encodeURIComponent(projectId)}`,
-    {
-      method: "POST",
-      body: { content },
-      token,
-    },
-  );
+export function createTaskThoughtProcess({ taskId, projectId, content, token }) {
+  return request(`/v1/projects/tasks/${encodeURIComponent(taskId)}/thought-process?projectId=${encodeURIComponent(projectId)}`, {
+    method: "POST",
+    body: { content },
+    token,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -735,10 +603,7 @@ export function createTaskThoughtProcess({
  * @returns {Promise<{status: string, data: Object<string, object[]>, pageData: object, message: string}>}
  */
 export function getActivityLogs({ date, page = 1, limit = 20, token } = {}) {
-  const query = new URLSearchParams({
-    page: String(page),
-    limit: String(limit),
-  });
+  const query = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (date) query.set("date", date);
   return request(`/v1/projects/activity-logs?${query.toString()}`, {
     method: "GET",
@@ -758,27 +623,13 @@ export function getActivityLogs({ date, page = 1, limit = 20, token } = {}) {
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: object[], pageData: object, message: string}>}
  */
-export function getTaskAnalytics({
-  taskId,
-  projectId,
-  page = 1,
-  limit = 20,
-  date,
-  token,
-}) {
-  const query = new URLSearchParams({
-    projectId,
-    page: String(page),
-    limit: String(limit),
-  });
+export function getTaskAnalytics({ taskId, projectId, page = 1, limit = 20, date, token }) {
+  const query = new URLSearchParams({ projectId, page: String(page), limit: String(limit) });
   if (date) query.set("date", date);
-  return request(
-    `/v1/projects/tasks/${encodeURIComponent(taskId)}/analytics?${query.toString()}`,
-    {
-      method: "GET",
-      token,
-    },
-  );
+  return request(`/v1/projects/tasks/${encodeURIComponent(taskId)}/analytics?${query.toString()}`, {
+    method: "GET",
+    token,
+  });
 }
 
 /**
@@ -794,18 +645,8 @@ export function getTaskAnalytics({
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: object[], pageData: object, message: string}>}
  */
-export function getRoleScopedAnalytics({
-  projectId,
-  page = 1,
-  limit = 20,
-  date,
-  token,
-}) {
-  const query = new URLSearchParams({
-    projectId,
-    page: String(page),
-    limit: String(limit),
-  });
+export function getRoleScopedAnalytics({ projectId, page = 1, limit = 20, date, token }) {
+  const query = new URLSearchParams({ projectId, page: String(page), limit: String(limit) });
   if (date) query.set("date", date);
   return request(`/v1/projects/analytics?${query.toString()}`, {
     method: "GET",
@@ -825,18 +666,8 @@ export function getRoleScopedAnalytics({
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: {overview: object, data: object[], pageData: object}, message: string}>}
  */
-export function getAnalyticsOverview({
-  projectId,
-  page = 1,
-  limit = 20,
-  date,
-  token,
-}) {
-  const query = new URLSearchParams({
-    projectId,
-    page: String(page),
-    limit: String(limit),
-  });
+export function getAnalyticsOverview({ projectId, page = 1, limit = 20, date, token }) {
+  const query = new URLSearchParams({ projectId, page: String(page), limit: String(limit) });
   if (date) query.set("date", date);
   return request(`/v1/projects/analytics/overview?${query.toString()}`, {
     method: "GET",
@@ -855,13 +686,10 @@ export function getAnalyticsOverview({
  * @returns {Promise<{status: string, data: object, message: string}>}
  */
 export function getAnalyticsInsight({ analyticsId, projectId, token }) {
-  return request(
-    `/v1/projects/analytics/${encodeURIComponent(analyticsId)}/insight?projectId=${encodeURIComponent(projectId)}`,
-    {
-      method: "GET",
-      token,
-    },
-  );
+  return request(`/v1/projects/analytics/${encodeURIComponent(analyticsId)}/insight?projectId=${encodeURIComponent(projectId)}`, {
+    method: "GET",
+    token,
+  });
 }
 
 /**
@@ -875,21 +703,17 @@ export function getAnalyticsInsight({ analyticsId, projectId, token }) {
  * @returns {Promise<{status: string, data: object, message: string}>}
  */
 export function getAnalyticsById({ analyticsId, projectId, token }) {
-  return request(
-    `/v1/projects/analytics/${encodeURIComponent(analyticsId)}?projectId=${encodeURIComponent(projectId)}`,
-    {
-      method: "GET",
-      token,
-    },
-  );
+  return request(`/v1/projects/analytics/${encodeURIComponent(analyticsId)}?projectId=${encodeURIComponent(projectId)}`, {
+    method: "GET",
+    token,
+  });
 }
 
 // ---------------------------------------------------------------------------
 // Messaging: DMs & project group chat
 // ---------------------------------------------------------------------------
 
-const orgQuery = (organizationId) =>
-  `organizationId=${encodeURIComponent(organizationId)}`;
+const orgQuery = (organizationId) => `organizationId=${encodeURIComponent(organizationId)}`;
 
 /**
  * POST /v1/messaging/conversations?organizationId=...
@@ -901,11 +725,7 @@ const orgQuery = (organizationId) =>
  * @param {string} params.token - auth token
  * @returns {Promise<{status: string, data: {id: string, participants: object[], ...}, message: string}>}
  */
-export function createConversation({
-  organizationId,
-  organizationUsers,
-  token,
-}) {
+export function createConversation({ organizationId, organizationUsers, token }) {
   return request(`/v1/messaging/conversations?${orgQuery(organizationId)}`, {
     method: "POST",
     body: { organizationUsers },
@@ -918,32 +738,17 @@ export function createConversation({
  * Direct conversations for the authenticated org user, most recent activity
  * first. Each row includes participants, a `messages` preview and `unreadCount`.
  */
-export function getConversations({
-  organizationId,
-  page = 1,
-  limit = 50,
-  token,
-}) {
-  const query = new URLSearchParams({
-    organizationId,
-    page: String(page),
-    limit: String(limit),
-  });
-  return request(`/v1/messaging/conversations?${query.toString()}`, {
-    method: "GET",
-    token,
-  });
+export function getConversations({ organizationId, page = 1, limit = 50, token }) {
+  const query = new URLSearchParams({ organizationId, page: String(page), limit: String(limit) });
+  return request(`/v1/messaging/conversations?${query.toString()}`, { method: "GET", token });
 }
 
 /** GET /v1/messaging/conversations/{conversationId}?organizationId=... */
 export function getConversation({ conversationId, organizationId, token }) {
-  return request(
-    `/v1/messaging/conversations/${encodeURIComponent(conversationId)}?${orgQuery(organizationId)}`,
-    {
-      method: "GET",
-      token,
-    },
-  );
+  return request(`/v1/messaging/conversations/${encodeURIComponent(conversationId)}?${orgQuery(organizationId)}`, {
+    method: "GET",
+    token,
+  });
 }
 
 /**
@@ -951,47 +756,21 @@ export function getConversation({ conversationId, organizationId, token }) {
  * Paginated messages incl. replyToMessage, deletedAt, checkIn, messageAttachments
  * (with signed urls) and readBy receipts.
  */
-export function getConversationMessages({
-  conversationId,
-  organizationId,
-  page = 1,
-  limit = 30,
-  token,
-}) {
-  const query = new URLSearchParams({
-    organizationId,
-    page: String(page),
-    limit: String(limit),
+export function getConversationMessages({ conversationId, organizationId, page = 1, limit = 30, token }) {
+  const query = new URLSearchParams({ organizationId, page: String(page), limit: String(limit) });
+  return request(`/v1/messaging/conversations/${encodeURIComponent(conversationId)}/messages?${query.toString()}`, {
+    method: "GET",
+    token,
   });
-  return request(
-    `/v1/messaging/conversations/${encodeURIComponent(conversationId)}/messages?${query.toString()}`,
-    {
-      method: "GET",
-      token,
-    },
-  );
 }
 
 /** GET /v1/messaging/conversations/{conversationId}/participants?organizationId=...&page=...&limit=... */
-export function getConversationParticipants({
-  conversationId,
-  organizationId,
-  page = 1,
-  limit = 50,
-  token,
-}) {
-  const query = new URLSearchParams({
-    organizationId,
-    page: String(page),
-    limit: String(limit),
+export function getConversationParticipants({ conversationId, organizationId, page = 1, limit = 50, token }) {
+  const query = new URLSearchParams({ organizationId, page: String(page), limit: String(limit) });
+  return request(`/v1/messaging/conversations/${encodeURIComponent(conversationId)}/participants?${query.toString()}`, {
+    method: "GET",
+    token,
   });
-  return request(
-    `/v1/messaging/conversations/${encodeURIComponent(conversationId)}/participants?${query.toString()}`,
-    {
-      method: "GET",
-      token,
-    },
-  );
 }
 
 /**
@@ -999,86 +778,86 @@ export function getConversationParticipants({
  * The project's group conversation (includes participants + unreadCount).
  */
 export function getProjectConversation({ projectId, organizationId, token }) {
-  return request(
-    `/v1/messaging/conversations/by-project/${encodeURIComponent(projectId)}?${orgQuery(organizationId)}`,
-    {
-      method: "GET",
-      token,
-    },
-  );
+  return request(`/v1/messaging/conversations/by-project/${encodeURIComponent(projectId)}?${orgQuery(organizationId)}`, {
+    method: "GET",
+    token,
+  });
 }
 
 /**
  * PATCH /v1/messaging/conversations/{conversationId}/read?organizationId=...
  * Marks the latest message as read for the authenticated org user.
  */
-export function markConversationRead({
-  conversationId,
-  organizationId,
-  token,
-}) {
-  return request(
-    `/v1/messaging/conversations/${encodeURIComponent(conversationId)}/read?${orgQuery(organizationId)}`,
-    {
-      method: "PATCH",
-      token,
-    },
-  );
+export function markConversationRead({ conversationId, organizationId, token }) {
+  return request(`/v1/messaging/conversations/${encodeURIComponent(conversationId)}/read?${orgQuery(organizationId)}`, {
+    method: "PATCH",
+    token,
+  });
 }
 
 /**
  * DELETE /v1/messaging/conversations/{conversationId}/messages/{messageId}?organizationId=...
  * Soft-deletes one of the caller's own messages (row stays; `deletedAt` is set).
  */
-export function deleteConversationMessage({
-  conversationId,
-  messageId,
-  organizationId,
-  token,
-}) {
+export function deleteConversationMessage({ conversationId, messageId, organizationId, token }) {
   return request(
     `/v1/messaging/conversations/${encodeURIComponent(conversationId)}/messages/${encodeURIComponent(messageId)}?${orgQuery(organizationId)}`,
-    { method: "DELETE", token },
+    { method: "DELETE", token }
   );
 }
 
 /**
- * POST /v1/messaging/conversations/{conversationId}/messages?organizationId=...
+ * Sends a message into a DM or project group chat.
  *
- * ASSUMPTION: the docs you shared don't include a send endpoint (the backend
- * mentions realtime events, so sending may be a socket event). This follows the
- * REST convention of the sibling routes. If your backend differs, this is the
- * only function to change.
- *
- * @param {Object} params
- * @param {string} params.conversationId
- * @param {string} params.organizationId
- * @param {string} params.content
- * @param {string} [params.replyToMessageId]
- * @param {Array<{key: string, fileType: string, fileName: string, fileSize: number}>} [params.attachments]
- * @param {string} params.token - auth token
+ * The Swagger docs don't list a send route, so this tries the likely REST
+ * routes in order. Only 404/405 ("route doesn't exist") moves on to the next
+ * candidate; any other error (401, 403, 422...) is real and is thrown as-is.
+ * The route that works is remembered for the rest of the session.
+ * Once you know the real route, delete the others from SEND_ROUTES.
  */
-export function sendConversationMessage({
-  conversationId,
-  organizationId,
-  content,
-  replyToMessageId,
-  attachments = [],
-  checkIn,
-  token,
-}) {
-  const body = { content, attachments };
-  // ASSUMPTION: check-in messages carry a `checkIn` object (the read side exposes blocker / focusTasks / inProgressTasks).
-  if (checkIn) body.checkIn = checkIn;
+const SEND_ROUTES = [
+  (id, org) => ({ path: `/v1/messaging/conversations/${encodeURIComponent(id)}/messages?${orgQuery(org)}`, withId: false }),
+  (id, org) => ({ path: `/v1/messaging/conversations/${encodeURIComponent(id)}/message?${orgQuery(org)}`, withId: false }),
+  (id, org) => ({ path: `/v1/messaging/messages?${orgQuery(org)}`, withId: true }),
+  (id, org) => ({ path: `/v1/messaging/conversations/messages?${orgQuery(org)}`, withId: true }),
+];
+let workingSendRoute = null;
+
+export async function sendConversationMessage({ conversationId, organizationId, content, replyToMessageId, attachments = [], checkIn, token }) {
+  const body = {};
+  if (content) body.content = content;
+  if (attachments && attachments.length) body.attachments = attachments;
   if (replyToMessageId) body.replyToMessageId = replyToMessageId;
-  return request(
-    `/v1/messaging/conversations/${encodeURIComponent(conversationId)}/messages?${orgQuery(organizationId)}`,
-    {
-      method: "POST",
-      body,
-      token,
-    },
+  if (checkIn) body.checkIn = checkIn;
+
+  const order = workingSendRoute !== null
+    ? [workingSendRoute, ...SEND_ROUTES.map((_, i) => i).filter((i) => i !== workingSendRoute)]
+    : SEND_ROUTES.map((_, i) => i);
+
+  let lastErr;
+  for (const i of order) {
+    const { path, withId } = SEND_ROUTES[i](conversationId, organizationId);
+    try {
+      const res = await request(path, {
+        method: "POST",
+        body: withId ? { conversationId, ...body } : body,
+        token,
+      });
+      workingSendRoute = i;
+      console.info(`[api] send route that worked: #${i} ${path}`);
+      return res;
+    } catch (err) {
+      lastErr = err;
+      if (err.status !== 404 && err.status !== 405) throw err;
+    }
+  }
+  const e = new Error(
+    "Couldn't send: the server has no REST route for sending messages (tried " +
+      SEND_ROUTES.length +
+      "). Sending is probably a socket event; check the backend docs for the send route/event name."
   );
+  e.status = lastErr?.status;
+  throw e;
 }
 
 // ---------------------------------------------------------------------------
@@ -1109,18 +888,12 @@ export function updateCurrentUser({ firstName, lastName, avatarKey, token }) {
  * ASSUMPTION: `sign` is the number of upload URLs wanted (the docs don't say).
  */
 export function getUploadSignedUrls({ count = 1, token }) {
-  return request(
-    `/v1/files/upload-signed-url?sign=${encodeURIComponent(String(count))}`,
-    { method: "GET", token },
-  );
+  return request(`/v1/files/upload-signed-url?sign=${encodeURIComponent(String(count))}`, { method: "GET", token });
 }
 
 /** GET /v1/files/signed-url?key=... — temporary download URL for a stored file. */
 export function getFileSignedUrl({ key, token }) {
-  return request(`/v1/files/signed-url?key=${encodeURIComponent(key)}`, {
-    method: "GET",
-    token,
-  });
+  return request(`/v1/files/signed-url?key=${encodeURIComponent(key)}`, { method: "GET", token });
 }
 
 /**
@@ -1133,31 +906,18 @@ export async function uploadFiles(files, token) {
   if (!files.length) return [];
   const res = await getUploadSignedUrls({ count: files.length, token });
   const slots = res.data || [];
-  if (slots.length < files.length)
-    throw new Error("Could not get upload links. Please try again.");
+  if (slots.length < files.length) throw new Error("Could not get upload links. Please try again.");
   return Promise.all(
     files.map(async (file, i) => {
       let put;
       try {
-        put = await fetch(slots[i].url, {
-          method: "PUT",
-          body: file,
-          headers: { "Content-Type": file.type || "application/octet-stream" },
-        });
+        put = await fetch(slots[i].url, { method: "PUT", body: file, headers: { "Content-Type": file.type || "application/octet-stream" } });
       } catch {
-        throw new Error(
-          `Upload failed for ${file.name}. Check your connection.`,
-        );
+        throw new Error(`Upload failed for ${file.name}. Check your connection.`);
       }
-      if (!put.ok)
-        throw new Error(`Upload failed for ${file.name} (${put.status}).`);
-      return {
-        key: slots[i].key,
-        fileType: file.type,
-        fileName: file.name,
-        fileSize: file.size,
-      };
-    }),
+      if (!put.ok) throw new Error(`Upload failed for ${file.name} (${put.status}).`);
+      return { key: slots[i].key, fileType: file.type, fileName: file.name, fileSize: file.size };
+    })
   );
 }
 
@@ -1167,38 +927,21 @@ export async function uploadFiles(files, token) {
 
 /** GET /v1/organization/team/invitations?page=&limit= — rows have acceptedAt / rejectedAt / email / organization. */
 export function getInvitations({ page = 1, limit = 50, token }) {
-  const query = new URLSearchParams({
-    page: String(page),
-    limit: String(limit),
-  });
-  return request(`/v1/organization/team/invitations?${query.toString()}`, {
-    method: "GET",
-    token,
-  });
+  const query = new URLSearchParams({ page: String(page), limit: String(limit) });
+  return request(`/v1/organization/team/invitations?${query.toString()}`, { method: "GET", token });
 }
 
 /** GET /v1/organization/team/invitation/{invitationId} */
 export function getInvitation({ invitationId, token }) {
-  return request(
-    `/v1/organization/team/invitation/${encodeURIComponent(invitationId)}`,
-    { method: "GET", token },
-  );
+  return request(`/v1/organization/team/invitation/${encodeURIComponent(invitationId)}`, { method: "GET", token });
 }
 
 /** POST /v1/organization/team/invitation/accept — { id } */
 export function acceptInvitation({ id, token }) {
-  return request("/v1/organization/team/invitation/accept", {
-    method: "POST",
-    body: { id },
-    token,
-  });
+  return request("/v1/organization/team/invitation/accept", { method: "POST", body: { id }, token });
 }
 
 /** POST /v1/organization/team/invitation/reject — { id } */
 export function rejectInvitation({ id, token }) {
-  return request("/v1/organization/team/invitation/reject", {
-    method: "POST",
-    body: { id },
-    token,
-  });
+  return request("/v1/organization/team/invitation/reject", { method: "POST", body: { id }, token });
 }

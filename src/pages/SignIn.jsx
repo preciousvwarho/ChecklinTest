@@ -4,7 +4,7 @@ import { signInWithGoogle, signInWithEmail } from "../lib/api";
 import { saveSession } from "../lib/session";
 import logo from "../assets/logo.png";
 
-const VITE_GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 // --- Inline icon components (brand marks drawn as simple SVGs) ---
 const GoogleIcon = () => (
@@ -89,7 +89,7 @@ export default function CheckInSignIn({ onNext }) {
   // We call google.accounts.id.prompt() ourselves from a normal button's
   // onClick, so there's a real, visible, clickable <button> in the DOM.
   useEffect(() => {
-    if (!VITE_GOOGLE_CLIENT_ID) {
+    if (!GOOGLE_CLIENT_ID) {
       const msg = "Google sign-in is unavailable. Please contact support.";
       console.warn(
         "Google sign-in is unavailable: VITE_GOOGLE_CLIENT_ID is not set. Add it to your .env file and restart the dev server."
@@ -103,7 +103,7 @@ export default function CheckInSignIn({ onNext }) {
     const initialize = () => {
       if (!window.google?.accounts?.id) return;
       window.google.accounts.id.initialize({
-        client_id: VITE_GOOGLE_CLIENT_ID,
+        client_id: GOOGLE_CLIENT_ID,
         callback: handleGoogleCredential,
         ux_mode: "popup",
       });
@@ -173,7 +173,7 @@ export default function CheckInSignIn({ onNext }) {
         }
         .ci-btn:focus-visible {
           outline: none;
-          box-shadow: 0 0 0 3px rgba(28,167,208,0.35);
+          box-shadow: 0 0 0 3px rgba(12,147,207,0.35);
         }
         .ci-btn:disabled {
           cursor: not-allowed;
@@ -182,7 +182,7 @@ export default function CheckInSignIn({ onNext }) {
         .ci-ripple {
           position: absolute;
           border-radius: 50%;
-          background: rgba(28,167,208,0.25);
+          background: rgba(12,147,207,0.25);
           transform: scale(0);
           animation: ci-ripple-anim 0.5s ease-out;
           pointer-events: none;
@@ -195,8 +195,8 @@ export default function CheckInSignIn({ onNext }) {
         }
 
         .ci-secondary:hover:not(:disabled) { border-color: #b9c2c9 !important; background: #fafbfc !important; }
-        .ci-primary:hover:not(:disabled) { background: #1691b6 !important; }
-        .ci-input:focus-within { border-color: #1CA7D0 !important; box-shadow: 0 0 0 3px rgba(28,167,208,0.15); }
+        .ci-primary:hover:not(:disabled) { background: #0A74A5 !important; }
+        .ci-input:focus-within { border-color: #0C93CF !important; box-shadow: 0 0 0 3px rgba(12,147,207,0.15); }
         .ci-link:hover { text-decoration: underline; }
 
         @media (max-width: 480px) {
@@ -269,7 +269,7 @@ export default function CheckInSignIn({ onNext }) {
 
           {error && <p style={styles.error}>{error}</p>}
 
-          <button
+          {/* <button
             className="ci-btn ci-secondary"
             style={{ ...styles.secondaryBtn, marginBottom: 0, marginTop: 12 }}
             type="button"
@@ -278,7 +278,7 @@ export default function CheckInSignIn({ onNext }) {
           >
             <AppleIcon />
             <span>Apple</span>
-          </button>
+          </button> */}
 
           <p style={styles.footer}>
             By continuing, you agreed to CheckIn{" "}
@@ -333,7 +333,7 @@ const styles = {
     marginBottom: 22,
   },
   brandAccent: {
-    color: "#1CA7D0",
+    color: "#0C93CF",
   },
   heading: {
     fontSize: 17,
@@ -367,7 +367,7 @@ const styles = {
   },
   primaryBtn: {
     width: "100%",
-    background: "#1CA7D0",
+    background: "#0C93CF",
     color: "#fff",
     border: "none",
     borderRadius: 9,

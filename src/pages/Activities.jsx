@@ -7,6 +7,7 @@ import { getAuthToken } from "../lib/session";
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thur", "Fri", "Sat"];
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
+// "2026-06-11" -> local Date (avoids UTC shift)
 function parseKey(key) {
   const [y, m, d] = key.split("-").map(Number);
   return new Date(y, m - 1, d);
@@ -118,17 +119,17 @@ export default function CheckInActivities() {
     <AppShell>
       <style>{`
         .ci-activities-inner { padding: 32px 40px 60px; max-width: 760px; }
-        .ci-activities-title { font-size: 26px; font-weight: 800; color: #141b1f; margin: 0 0 16px; }
+        .ci-activities-title { font-size: 26px; font-weight: 500; color: #141b1f; margin: 0 0 16px; }
         .ci-activities-divider { border: none; border-top: 1px solid #eef0f1; margin: 0 0 24px; }
 
         .ci-activities-date-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-        .ci-activities-date { font-size: 18px; font-weight: 800; color: #141b1f; margin: 0 0 2px; }
+        .ci-activities-date { font-size: 18px; font-weight: 500; color: #141b1f; margin: 0 0 2px; }
         .ci-activities-subcount { font-size: 12.5px; color: #9aa4aa; }
         .ci-activities-cal-btn {
           display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%;
-          background: #eaf6fa; border: none; color: #1CA7D0; cursor: pointer; flex-shrink: 0;
+          background: #E7F4FA; border: none; color: #0C93CF; cursor: pointer; flex-shrink: 0;
         }
-        .ci-activities-cal-btn:hover { background: #d9f0f6; }
+        .ci-activities-cal-btn:hover { background: #C5E5F4; }
 
         .ci-day-filters { display: flex; gap: 10px; margin-bottom: 28px; overflow-x: auto; padding-bottom: 4px; }
         .ci-day-filter {
@@ -138,7 +139,7 @@ export default function CheckInActivities() {
         }
         .ci-day-filter-label { font-size: 11px; font-weight: 600; color: #6b7680; }
         .ci-day-filter-date { font-size: 16px; font-weight: 800; color: #141b1f; }
-        .ci-day-filter.active { background: #1CA7D0; }
+        .ci-day-filter.active { background: #0C93CF; }
         .ci-day-filter.active .ci-day-filter-label,
         .ci-day-filter.active .ci-day-filter-date { color: #fff; }
         .ci-day-filter.all { font-size: 15px; font-weight: 800; color: #141b1f; }
@@ -147,17 +148,17 @@ export default function CheckInActivities() {
         .ci-timeline-day-label { width: 64px; flex-shrink: 0; padding-top: 6px; }
         .ci-timeline-day { font-size: 13px; font-weight: 700; color: #141b1f; }
         .ci-timeline-date { font-size: 11px; color: #9aa4aa; }
-        .ci-timeline-rail { flex: 1; border-left: 2px solid #dbeaf1; padding-left: 22px; display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
+        .ci-timeline-rail { flex: 1; border-left: 2px solid #C5E5F4; padding-left: 22px; display: flex; flex-direction: column; gap: 16px; margin-bottom: 20px; }
         .ci-timeline-row { position: relative; display: flex; align-items: center; gap: 14px; }
         .ci-timeline-dot {
           position: absolute; left: -28px; top: 50%; transform: translateY(-50%);
-          width: 9px; height: 9px; border-radius: 50%; background: #1CA7D0; border: 2px solid #fff; box-shadow: 0 0 0 2px #dbeaf1;
+          width: 9px; height: 9px; border-radius: 50%; background: #0C93CF; border: 2px solid #fff; box-shadow: 0 0 0 2px #C5E5F4;
         }
         .ci-timeline-time { width: 62px; flex-shrink: 0; font-size: 11px; font-weight: 600; color: #6b7680; }
         .ci-timeline-card {
-          flex: 1; display: flex; align-items: center; gap: 12px; background: #eef4fb; border-radius: 12px; padding: 12px 16px;
+          flex: 1; display: flex; align-items: center; gap: 12px; background: #E7F4FA; border-radius: 12px; padding: 12px 16px;
         }
-        .ci-timeline-avatar { width: 30px; height: 30px; border-radius: 50%; background: #bcdcec; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700; color: #1b6f8a; }
+        .ci-timeline-avatar { width: 30px; height: 30px; border-radius: 50%; background: #C5E5F4; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 700; color: #0C93CF; }
         .ci-timeline-project { color: #9aa4aa; }
         .ci-activities-date-input { position: absolute; opacity: 0; pointer-events: none; width: 0; height: 0; }
         .ci-activities-date-row { position: relative; }

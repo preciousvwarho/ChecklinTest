@@ -3,13 +3,13 @@ import {
   ArrowLeft,
   Pencil,
   MoreVertical,
-  Calendar,
+  MoreHorizontal,
+  CalendarDays,
   Plus,
   X,
   ThumbsUp,
-  MessageCircle,
-  Share2,
-  BarChart3,
+  Reply,
+  SquarePen,
   Wrench,
   LogOut,
 } from "lucide-react";
@@ -19,7 +19,6 @@ import {
   getTaskComments,
   createTaskComment,
   getTaskWorkLogs,
-  getTaskAnalytics,
   updateTaskStatus,
   updateTask as apiUpdateTask,
   deleteTask as apiDeleteTask,
@@ -31,19 +30,21 @@ import { personName, personImage } from "../lib/people";
 const SUB_TABS = [
   { id: "comment", label: "Comment" },
   { id: "work-log", label: "Work Log" },
-  { id: "analytics", label: "Analytics" },
 ];
 
 // Maps GET /v1/projects/tasks/{taskId}/comments entries into what the
 // comment list renders. Field names are a best guess pending the real
 // response shape.
-function toComment(c) {
+function toComment(c, fallbackAuthor = "Unknown") {
+  // The author may sit at the top level or be nested (like work logs use
+  // projectUser.user), so look in the likely places before giving up.
+  const person = c.projectUser?.user || c.user || c.author || c.createdBy || c.sender || c;
+  const name = personName(person, "") || personName(c, "");
   return {
     id: c.id,
-    author: personName(c, "Unknown"),
+    author: name || fallbackAuthor,
     time: c.createdAt ? new Date(c.createdAt).toLocaleString() : "Just now",
     text: c.content,
-    avatar: personImage(c) || `https://i.pravatar.cc/64?u=${c.id}`,
   };
 }
 
@@ -80,31 +81,27 @@ function workLogDayLabel(dateStr) {
   return d.toLocaleDateString([], { day: "numeric", month: "short", year: "numeric" });
 }
 
-function formatWeek(start, end) {
-  const opts = { day: "numeric", month: "short" };
-  const s = start ? new Date(start).toLocaleDateString(undefined, opts) : "";
-  const e = end ? new Date(end).toLocaleDateString(undefined, { ...opts, year: "numeric" }) : "";
-  return [s, e].filter(Boolean).join(" – ");
-}
-
-const PENDING_LABELS = { PENDING: "Pending", IN_PROGRESS: "In Progress", COMPLETED: "Completed" };
-
 function toMember(m) {
   return {
     id: m.id,
+    // Tasks reference people by organization user id, not the membership id.
+    userId: m.user?.id || m.userId || m.id,
     name: personName(m),
     avatar: personImage(m) || `https://i.pravatar.cc/64?u=${m.id}`,
   };
 }
+
+// Task member lists can hold plain ids or person objects.
+const idOf = (x) => (typeof x === "string" ? x : x?.userId || x?.user?.id || x?.id);
 
 const STATUS_OPTIONS = ["Pending", "In Progress", "Completed"];
 // UI labels <-> the enum values PATCH /v1/projects/tasks/{taskId}/status expects.
 const STATUS_TO_API = { Pending: "PENDING", "In Progress": "IN_PROGRESS", Completed: "COMPLETED" };
 
 const STATUS_STYLES = {
-  Pending: { bg: "#fdf3c8", color: "#8a6d00" },
-  "In Progress": { bg: "#dbeefc", color: "#0f6fb3" },
-  Completed: { bg: "#e0f6e9", color: "#1e9e63" },
+  Pending: { bg: "#FFEF1A", color: "#141b1f" },
+  "In Progress": { bg: "#0C93CF", color: "#fff" },
+  Completed: { bg: "#3CC48A", color: "#fff" },
 };
 
 export default function CheckInTaskDetail({
@@ -114,7 +111,6 @@ export default function CheckInTaskDetail({
   organizationId,
   onBack,
   onGoHome,
-  onOpenInsight,
   onDeleteTask,
 }) {
   const resolvedTaskId = taskId || task?.id;
@@ -127,10 +123,6 @@ export default function CheckInTaskDetail({
   const [teamPool, setTeamPool] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [analytics, setAnalytics] = useState([]);
-  const [analyticsLoading, setAnalyticsLoading] = useState(false);
-  const [analyticsError, setAnalyticsError] = useState("");
-  const [analyticsLoaded, setAnalyticsLoaded] = useState(false);
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [draft, setDraft] = useState("");
 
@@ -146,6 +138,7 @@ export default function CheckInTaskDetail({
   const [dueDate, setDueDate] = useState(task?.dueDate || "No due date");
 
   const [assignees, setAssignees] = useState([]);
+  const [apiAssigneeCount, setApiAssigneeCount] = useState(0);
   const [isAssignOpen, setIsAssignOpen] = useState(false);
   const [assigneeSearch, setAssigneeSearch] = useState("");
 
@@ -189,10 +182,23 @@ export default function CheckInTaskDetail({
 
         const pool = (membersResult.data || []).map(toMember);
         setTeamPool(pool);
-        const assignedIds = t.teamMembers || [];
-        setAssignees(pool.filter((m) => assignedIds.includes(m.id)));
+        const rawAssigned = [t.teamMembers, t.members, t.assignees, t.assignedTo, t.users].find(
+          (l) => Array.isArray(l) && l.length
+        ) || task?.members || [];
+        const assignedIds = rawAssigned.map(idOf).filter(Boolean);
+        setAssignees(
+          assignedIds.map((id, i) => {
+            const match = pool.find((m) => m.userId === id || m.id === id);
+            if (match) return match;
+            const raw = rawAssigned[i];
+            const img = raw && typeof raw === "object" ? personImage(raw) || raw.avatar || raw.imageUrl : null;
+            return { id, userId: id, name: "", avatar: img || null };
+          })
+        );
+        setApiAssigneeCount(t.teamMembersCount ?? t.membersCount ?? assignedIds.length);
 
-        setComments((commentsResult.data || []).map(toComment));
+        console.log("[TaskDetail] raw comment sample:", commentsResult.data?.[0]);
+        setComments((commentsResult.data || []).map((c) => toComment(c)));
         setWorkLogs((workLogsResult.data || []).map(toWorkLog));
         setWorkLogsNextPage(workLogsResult.pageData?.nextPage ?? null);
       } catch (err) {
@@ -230,48 +236,23 @@ export default function CheckInTaskDetail({
     }
   };
 
-  // GET /v1/projects/tasks/{taskId}/analytics - loaded the first time the
-  // Analytics tab is opened.
-  useEffect(() => {
-    if (subTab !== "analytics" || analyticsLoaded || !resolvedTaskId || !projectId) return;
-    let cancelled = false;
-    const run = async () => {
-      setAnalyticsLoading(true);
-      setAnalyticsError("");
-      try {
-        const res = await getTaskAnalytics({
-          taskId: resolvedTaskId,
-          projectId,
-          page: 1,
-          limit: 20,
-          token: getAuthToken(),
-        });
-        if (!cancelled) {
-          setAnalytics(res?.data || []);
-          setAnalyticsLoaded(true);
-        }
-      } catch (err) {
-        console.error("[TaskDetail] getTaskAnalytics failed:", err);
-        if (!cancelled) setAnalyticsError(err.message || "Failed to load analytics.");
-      } finally {
-        if (!cancelled) setAnalyticsLoading(false);
-      }
-    };
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [subTab, analyticsLoaded, resolvedTaskId, projectId]);
-
   // POST /v1/projects/tasks/{taskId}/comments
   const submitComment = async () => {
     if (!draft.trim()) return;
     const token = getAuthToken();
     try {
       const result = await createTaskComment({ taskId: resolvedTaskId, projectId, content: draft.trim(), token });
-      setComments((prev) => [toComment(result.data || { id: Date.now(), content: draft.trim() }), ...prev]);
+      const text = draft.trim();
       setDraft("");
       setIsComposerOpen(false);
+      // The create response often lacks the author, so reload the list from
+      // the server to get the real name. Fall back to adding it locally.
+      try {
+        const fresh = await getTaskComments({ taskId: resolvedTaskId, projectId, page: 1, limit: 20, token });
+        setComments((fresh.data || []).map((c) => toComment(c)));
+      } catch {
+        setComments((prev) => [toComment(result.data || { id: Date.now(), content: text }, "You"), ...prev]);
+      }
     } catch (err) {
       console.error("[TaskDetail] createTaskComment failed:", err);
       setError(err.message || "Failed to post comment.");
@@ -307,15 +288,17 @@ export default function CheckInTaskDetail({
   // PATCH /v1/projects/tasks/{taskId} — teamMembers takes the full list of
   // assigned user IDs, so toggling re-sends the whole set.
   const toggleAssignee = async (member) => {
-    const wasAssigned = assignees.some((a) => a.id === member.id);
-    const next = wasAssigned ? assignees.filter((a) => a.id !== member.id) : [...assignees, member];
+    const wasAssigned = assignees.some((a) => a.userId === member.userId);
+    const next = wasAssigned ? assignees.filter((a) => a.userId !== member.userId) : [...assignees, member];
     setAssignees(next);
+    setApiAssigneeCount(next.length);
     const token = getAuthToken();
     try {
-      await apiUpdateTask({ taskId: resolvedTaskId, teamMembers: next.map((m) => m.id), token });
+      await apiUpdateTask({ taskId: resolvedTaskId, teamMembers: next.map((m) => m.userId), token });
     } catch (err) {
       console.error("[TaskDetail] updateTask (assignees) failed:", err);
       setAssignees(assignees); // revert on failure
+      setApiAssigneeCount(assignees.length);
       setError(err.message || "Failed to update assignees.");
     }
   };
@@ -362,25 +345,37 @@ export default function CheckInTaskDetail({
 
   const statusStyle = STATUS_STYLES[status] || STATUS_STYLES.Pending;
 
+  // "4 December" -> day "04", month "December"
+  const [dueDayRaw, ...dueMonthParts] = dueDate.split(" ");
+  const dueDayIsNumber = /^\d+$/.test(dueDayRaw);
+  const dueDay = dueDayIsNumber ? dueDayRaw.padStart(2, "0") : dueDate;
+  const dueMonth = dueDayIsNumber ? dueMonthParts.join(" ") : "";
+
+  const shownAssignees = assignees.slice(0, 3);
+  const assigneeTotal = Math.max(assignees.length, apiAssigneeCount);
+
   return (
     <AppShell>
       <style>{`
-        .ci-td-inner { max-width: 720px; padding: 32px 40px 60px; }
-        .ci-td-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=Poppins:wght@400;500;600&display=swap");
+
+        .ci-td-inner { max-width: 600px; padding: 32px 40px 60px; font-family: "Inter", sans-serif; }
+        .ci-td-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
         .ci-td-header-left { display: flex; align-items: center; gap: 12px; }
         .ci-back-btn {
           display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
           border-radius: 8px; border: 1px solid #eef0f1; background: #fff; color: #141b1f; cursor: pointer; flex-shrink: 0;
         }
         .ci-back-btn:hover { background: #f5f6f7; }
-        .ci-td-title { font-size: 26px; font-weight: 800; color: #141b1f; margin: 0; }
+        .ci-td-title { font-size: 48px; font-weight: 400; color: #3a3a3a; margin: 0 0 14px; line-height: 1.15; letter-spacing: -0.5px; }
         .ci-td-actions { display: flex; align-items: center; gap: 6px; position: relative; }
         .ci-icon-btn-ghost {
           display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;
           border-radius: 8px; border: none; background: transparent; color: #9aa4aa; cursor: pointer;
         }
         .ci-icon-btn-ghost:hover { background: #f5f6f7; }
-        .ci-td-description { font-size: 13.5px; color: #6b7680; line-height: 1.6; margin: 0 0 24px; }
+        .ci-td-description { font-size: 16px; color: #1f1f1f; line-height: 1.7; margin: 0 0 26px; max-width: 520px; }
+        .ci-td-error { color: #d64545; font-size: 12.5px; margin-bottom: 16px; }
 
         /* ---------- more-options dropdown ---------- */
         .ci-more-menu {
@@ -395,72 +390,64 @@ export default function CheckInTaskDetail({
         .ci-more-menu-item:hover { background: rgba(255,255,255,0.08); }
         .ci-more-menu-item.danger { color: #ff6b6b; }
 
-        .ci-td-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 26px; }
+        /* ---------- info cards ---------- */
+        .ci-td-cards { display: flex; gap: 36px; margin-bottom: 36px; }
         .ci-td-card {
-          border: none; background: #EAF4FC; border-radius: 16px; padding: 20px 22px;
-          display: flex; flex-direction: column; min-height: 130px;
+          position: relative; flex: 1; max-width: 244px; min-height: 120px; background: #EBF6FE;
+          border-radius: 20px; padding: 18px 20px; overflow: hidden; box-sizing: border-box;
         }
-        .ci-td-card-label { font-size: 18px; font-weight: 800; color: #141b1f; }
+        .ci-td-card-label { font-family: "Poppins", sans-serif; font-size: 16px; font-weight: 600; color: #1d1d1d; }
 
-        .ci-assigned-content { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 22px; }
-        .ci-assignee-stack { display: flex; align-items: center; }
+        .ci-assignee-stack { position: absolute; left: 20px; bottom: 20px; display: flex; align-items: center; }
         .ci-assignee-avatar {
-          width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 2px solid #EAF4FC; margin-left: -10px;
+          width: 26px; height: 26px; border-radius: 50%; object-fit: cover; margin-left: -10px; background: #E2F2F9;
         }
         .ci-assignee-avatar:first-child { margin-left: 0; }
-        .ci-assignee-dot {
-          width: 38px; height: 38px; border-radius: 50%; margin-left: -10px; border: 2px solid #EAF4FC;
-          background: linear-gradient(135deg, #bfe3f7, #6fc3ea);
-        }
+        .ci-assignee-dot { width: 26px; height: 26px; border-radius: 50%; margin-left: -10px; background: #E2F2F9; }
+        .ci-assignee-dot:first-child { margin-left: 0; }
+        .ci-assignee-dot.d2 { background: #B5E0FB; }
+        .ci-assignee-dot.d3 { background: #8CCDF7; }
         .ci-assignee-count {
-          width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg, #3fb6e0, #1a92c9);
-          color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center;
-          border: 2px solid #EAF4FC; margin-left: -10px;
+          display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%;
+          background: #0C93CF; color: #fff; font-size: 11px; font-weight: 500; margin-left: -10px; position: relative;
         }
+        .ci-assignee-count:first-child { margin-left: 0; }
         .ci-assign-work-btn {
-          display: flex; align-items: center; gap: 6px; white-space: nowrap;
-          background: linear-gradient(135deg, #3fb6e0, #0f8fc9); color: #fff; border: none;
-          border-radius: 10px; font-size: 13px; font-weight: 700; padding: 10px 16px; cursor: pointer;
+          position: absolute; right: 0; bottom: 18px; display: flex; align-items: center; gap: 8px; white-space: nowrap;
+          background: linear-gradient(90deg, #0C93CF 0%, #0C93CF 100%); color: #fff; border: none;
+          border-radius: 10px 0 0 10px; padding: 9px 22px 9px 14px; font-family: "Poppins", sans-serif;
+          font-size: 12px; font-weight: 500; cursor: pointer;
         }
-        .ci-assign-work-btn:hover { filter: brightness(1.05); }
+        .ci-assign-work-btn:hover { filter: brightness(0.96); }
 
-        .ci-duedate-content { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; padding-top: 12px; }
-        .ci-due-date-row { display: flex; align-items: center; gap: 8px; font-size: 32px; font-weight: 700; color: #141b1f; line-height: 1.1; }
-        .ci-due-date-month { font-size: 15px; color: #141b1f; font-weight: 500; }
+        .ci-due-date-row { display: flex; align-items: center; gap: 8px; margin-top: 4px; font-family: "Poppins", sans-serif; font-size: 32px; font-weight: 400; color: #1d1d1d; line-height: 1.1; }
+        .ci-due-date-month { font-family: "Poppins", sans-serif; font-size: 16px; font-weight: 400; color: #3a3a3a; margin-top: 2px; }
         .ci-status-pill {
-          display: inline-block; font-size: 11.5px; font-weight: 700; padding: 8px 16px; border-radius: 8px; flex-shrink: 0;
+          position: absolute; right: 0; bottom: 20px; font-family: "Poppins", sans-serif; font-size: 12px; font-weight: 500;
+          border-radius: 6px 0 0 6px; padding: 6px 28px 6px 20px;
           background: ${statusStyle.bg}; color: ${statusStyle.color};
         }
 
-        .ci-sub-tabs { display: flex; align-items: center; gap: 8px; border: 1px solid #eef0f1; border-radius: 12px; padding: 8px 10px; margin-bottom: 20px; }
-        .ci-sub-tab { border: 1.5px solid transparent; background: none; padding: 7px 16px; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: #6b7680; cursor: pointer; }
-        .ci-sub-tab.active { border-color: #1CA7D0; color: #1CA7D0; }
+        /* ---------- tabs ---------- */
+        .ci-sub-tabs {
+          display: flex; align-items: center; gap: 14px; border: 1.5px solid #dcdfe3; border-radius: 8px;
+          padding: 10px 24px; margin-bottom: 26px; background: #fff;
+        }
+        .ci-sub-tab {
+          background: none; border: 1.5px solid transparent; border-radius: 8px; padding: 5px 17px;
+          font-family: "Poppins", sans-serif; font-size: 14px; font-weight: 400; color: #1d1d1d; cursor: pointer;
+        }
+        .ci-sub-tab.active { border-color: #0C93CF; color: #0C93CF; }
 
-        .ci-an-list { display: flex; flex-direction: column; gap: 16px; }
-        .ci-an-card { border: 1px solid #eef0f1; border-radius: 14px; padding: 16px 18px; background: #fff; }
-        .ci-an-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-        .ci-an-week { font-size: 13.5px; font-weight: 800; color: #141b1f; }
-        .ci-an-done { font-size: 11px; font-weight: 700; color: #1e9e63; background: #e7f7ee; border-radius: 999px; padding: 4px 10px; white-space: nowrap; }
-        .ci-an-rate-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-        .ci-an-bar { flex: 1; height: 8px; border-radius: 999px; background: #eaf0f4; overflow: hidden; }
-        .ci-an-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #3fb6e0, #1a92c9); }
-        .ci-an-rate { font-size: 13px; font-weight: 800; color: #141b1f; min-width: 40px; text-align: right; }
-        .ci-an-remark { font-size: 12.5px; color: #3a4247; line-height: 1.55; margin: 0 0 12px; }
-        .ci-an-section-title { font-size: 12px; font-weight: 700; color: #141b1f; margin: 12px 0 6px; }
-        .ci-an-ul { margin: 0; padding-left: 18px; }
-        .ci-an-ul li { font-size: 12.5px; color: #3a4247; line-height: 1.6; }
-        .ci-an-risk { font-size: 12.5px; color: #3a4247; line-height: 1.6; }
-        .ci-an-risk b { color: #c93b3b; }
-        .ci-an-pending-pill { font-size: 10.5px; font-weight: 700; color: #8a6d00; background: #fdf3c8; border-radius: 999px; padding: 2px 8px; margin-left: 6px; }
+        /* ---------- work log ---------- */
         .ci-an-state { font-size: 13.5px; color: #9aa4aa; padding: 10px 0; }
         .ci-an-state.error { color: #d64545; }
-
         .ci-wl { display: flex; flex-direction: column; }
         .ci-wl-day { font-size: 11px; font-weight: 700; color: #9aa4aa; margin: 16px 0 6px; text-transform: uppercase; letter-spacing: 0.04em; }
         .ci-wl-day:first-child { margin-top: 2px; }
         .ci-wl-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #eef0f1; }
         .ci-wl-item:last-of-type { border-bottom: none; }
-        .ci-wl-dot { width: 9px; height: 9px; border-radius: 50%; background: #1CA7D0; margin-top: 5px; flex-shrink: 0; }
+        .ci-wl-dot { width: 9px; height: 9px; border-radius: 50%; background: #0C93CF; margin-top: 5px; flex-shrink: 0; }
         .ci-wl-dot.comment { background: #8a97a0; }
         .ci-wl-dot.status { background: #1e9e63; }
         .ci-wl-dot.assign { background: #e0a21b; }
@@ -468,30 +455,27 @@ export default function CheckInTaskDetail({
         .ci-wl-text { font-size: 12.5px; color: #141b1f; line-height: 1.5; }
         .ci-wl-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 11px; color: #9aa4aa; margin-top: 3px; }
         .ci-wl-chip { background: #f1f3f4; color: #6b7680; border-radius: 999px; padding: 1px 8px; font-size: 10px; font-weight: 600; }
-        .ci-wl-more { align-self: center; margin-top: 12px; border: 1px solid #dfe3e6; background: #fff; color: #1CA7D0; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 7px 16px; cursor: pointer; }
+        .ci-wl-more { align-self: center; margin-top: 12px; border: 1px solid #dfe3e6; background: #fff; color: #0C93CF; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 7px 16px; cursor: pointer; }
         .ci-wl-more:disabled { opacity: 0.6; cursor: default; }
 
-        .ci-comment-list { display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px; }
-        .ci-comment { display: flex; gap: 10px; }
-        .ci-comment-avatar { width: 30px; height: 30px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+        /* ---------- comments ---------- */
+        .ci-comment-list { display: flex; flex-direction: column; gap: 36px; margin-bottom: 28px; }
+        .ci-comment { display: flex; gap: 8px; }
+        .ci-comment-avatar { width: 28px; height: 28px; border-radius: 50%; background: #0C93CF; flex-shrink: 0; margin-top: 2px; }
         .ci-comment-body { flex: 1; min-width: 0; }
-        .ci-comment-meta { display: flex; align-items: baseline; gap: 8px; margin-bottom: 3px; }
-        .ci-comment-author { font-size: 13px; font-weight: 700; color: #141b1f; }
-        .ci-comment-time { font-size: 11px; color: #b0b8bd; }
-        .ci-comment-text { font-size: 12.5px; color: #3a4247; line-height: 1.5; margin-bottom: 6px; }
-        .ci-comment-actions { display: flex; align-items: center; gap: 14px; }
-        .ci-comment-action-btn {
-          display: flex; align-items: center; gap: 4px; background: none; border: none; color: #9aa4aa;
-          font-size: 11px; font-weight: 600; cursor: pointer; padding: 2px;
-        }
-        .ci-comment-action-btn:hover { color: #1CA7D0; }
+        .ci-comment-author { font-family: "Poppins", sans-serif; font-size: 16px; font-weight: 400; color: #1d1d1d; line-height: 1.2; }
+        .ci-comment-time { font-size: 10px; color: #7a7a7a; margin-top: 2px; }
+        .ci-comment-text { font-size: 12.5px; color: #1d1d1d; margin-top: 18px; line-height: 1.5; }
+        .ci-comment-actions { display: flex; align-items: center; gap: 14px; margin-top: 12px; }
+        .ci-comment-action-btn { display: flex; background: none; border: none; color: #000; padding: 0; cursor: pointer; }
+        .ci-comment-action-btn:hover { color: #0C93CF; }
 
         .ci-add-comment-row {
           display: flex; align-items: center; gap: 10px; border: 1px dashed #dfe3e6; border-radius: 12px;
           padding: 12px 14px; cursor: pointer; background: #fff; width: 100%; text-align: left;
         }
-        .ci-add-comment-row:hover { border-color: #1CA7D0; background: #f7fcfd; }
-        .ci-add-comment-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+        .ci-add-comment-row:hover { border-color: #0C93CF; background: #F1F9FC; }
+        .ci-add-comment-avatar { width: 28px; height: 28px; border-radius: 50%; background: #0C93CF; flex-shrink: 0; }
         .ci-add-comment-placeholder { font-size: 12.5px; color: #9aa4aa; }
 
         /* ---------- shared modal shell ---------- */
@@ -519,7 +503,7 @@ export default function CheckInTaskDetail({
           width: 100%; min-height: 120px; border: 1px solid #dfe3e6; border-radius: 9px; padding: 12px 14px;
           font-size: 13.5px; color: #141b1f; font-family: inherit; outline: none; resize: vertical; margin-bottom: 18px;
         }
-        .ci-field-input:focus, .ci-field-textarea:focus { border-color: #1CA7D0; box-shadow: 0 0 0 3px rgba(28,167,208,0.12); }
+        .ci-field-input:focus, .ci-field-textarea:focus { border-color: #0C93CF; box-shadow: 0 0 0 3px rgba(12,147,207,0.12); }
         .ci-composer-submit-btn {
           width: 100%; border: none; border-radius: 9px; padding: 12px 0; font-size: 15px; font-weight: 600;
         }
@@ -539,14 +523,15 @@ export default function CheckInTaskDetail({
         .ci-assign-row-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
         .ci-assign-row-name { flex: 1; font-size: 13px; font-weight: 600; color: #141b1f; }
         .ci-assign-row-tag {
-          font-size: 10px; font-weight: 700; color: #1CA7D0; background: #eaf6fa; border-radius: 999px; padding: 3px 10px;
+          font-size: 10px; font-weight: 700; color: #0C93CF; background: #E7F4FA; border-radius: 999px; padding: 3px 10px;
         }
         .ci-assign-row-tag.added { color: #1e9e63; background: #e7f7ee; }
 
         @media (max-width: 640px) {
           .ci-td-inner { padding: 24px 20px 40px; }
-          .ci-td-title { font-size: 20px; }
-          .ci-td-cards { grid-template-columns: 1fr; }
+          .ci-td-title { font-size: 36px; }
+          .ci-td-cards { flex-direction: column; gap: 16px; }
+          .ci-td-card { max-width: none; }
         }
       `}</style>
 
@@ -560,14 +545,6 @@ export default function CheckInTaskDetail({
             )}
           </div>
           <div className="ci-td-actions">
-            <button
-              className="ci-icon-btn-ghost"
-              type="button"
-              aria-label="View task analytics"
-              onClick={() => onOpenInsight?.()}
-            >
-              <BarChart3 size={15} />
-            </button>
             <button className="ci-icon-btn-ghost" type="button" aria-label="Edit task" onClick={openEdit}>
               <Pencil size={15} />
             </button>
@@ -608,41 +585,37 @@ export default function CheckInTaskDetail({
           </div>
         </div>
 
-        <h1 className="ci-td-title" style={{ marginBottom: 10 }}>{editableTitle}</h1>
+        <h1 className="ci-td-title">{editableTitle}</h1>
         <p className="ci-td-description">{editableDescription}</p>
+        {error && <div className="ci-td-error">{error}</div>}
 
         <div className="ci-td-cards">
           <div className="ci-td-card">
             <div className="ci-td-card-label">Assigned to</div>
-            <div className="ci-assigned-content">
-              <div className="ci-assignee-stack">
-                <span className="ci-assignee-dot" />
-                <span className="ci-assignee-dot" />
-                <span className="ci-assignee-count">+{Math.max(assignees.length, 8)}</span>
-              </div>
-              <button
-                type="button"
-                className="ci-assign-work-btn"
-                onClick={() => setIsAssignOpen(true)}
-              >
-                <Plus size={13} />
-                Assign Task
-              </button>
+            <div className="ci-assignee-stack">
+              {shownAssignees.map((a, i) =>
+                a.avatar ? (
+                  <img key={a.userId || a.id || i} src={a.avatar} alt="" className="ci-assignee-avatar" />
+                ) : (
+                  <span key={a.userId || a.id || i} className={`ci-assignee-dot d${i + 1}`} />
+                )
+              )}
+              {assigneeTotal > 0 && <span className="ci-assignee-count">+{assigneeTotal}</span>}
             </div>
+            <button type="button" className="ci-assign-work-btn" onClick={() => setIsAssignOpen(true)}>
+              <Plus size={13} strokeWidth={2.5} />
+              Assign Task
+            </button>
           </div>
 
           <div className="ci-td-card">
             <div className="ci-td-card-label">Due Date</div>
-            <div className="ci-duedate-content">
-              <div>
-                <div className="ci-due-date-row">
-                  <Calendar size={22} color="#141b1f" />
-                  {dueDate.split(" ")[0] || dueDate}
-                </div>
-                <div className="ci-due-date-month">{dueDate.split(" ").slice(1).join(" ")}</div>
-              </div>
-              <span className="ci-status-pill">{status}</span>
+            <div className="ci-due-date-row">
+              <CalendarDays size={26} strokeWidth={2} color="#1d1d1d" />
+              {dueDay}
             </div>
+            {dueMonth && <div className="ci-due-date-month">{dueMonth}</div>}
+            <span className="ci-status-pill">{status}</span>
           </div>
         </div>
 
@@ -664,28 +637,23 @@ export default function CheckInTaskDetail({
             <div className="ci-comment-list">
               {comments.map((c) => (
                 <div key={c.id} className="ci-comment">
-                  <img src={c.avatar} alt="" className="ci-comment-avatar" />
+                  <div className="ci-comment-avatar" />
                   <div className="ci-comment-body">
-                    <div className="ci-comment-meta">
-                      <span className="ci-comment-author">{c.author}</span>
-                      <span className="ci-comment-time">{c.time}</span>
-                    </div>
+                    <div className="ci-comment-author">{c.author}</div>
+                    <div className="ci-comment-time">{c.time}</div>
                     <div className="ci-comment-text">{c.text}</div>
                     <div className="ci-comment-actions">
-                      <button className="ci-comment-action-btn" type="button">
-                        <ThumbsUp size={12} />
-                        Like
+                      <button className="ci-comment-action-btn" type="button" aria-label="Reply">
+                        <Reply size={16} />
                       </button>
-                      <button className="ci-comment-action-btn" type="button">
-                        <MessageCircle size={12} />
-                        Reply
+                      <button className="ci-comment-action-btn" type="button" aria-label="Like">
+                        <ThumbsUp size={16} />
                       </button>
-                      <button className="ci-comment-action-btn" type="button">
-                        <Share2 size={12} />
-                        Share
+                      <button className="ci-comment-action-btn" type="button" aria-label="Edit">
+                        <SquarePen size={16} />
                       </button>
-                      <button className="ci-comment-action-btn" type="button">
-                        <MoreVertical size={12} />
+                      <button className="ci-comment-action-btn" type="button" aria-label="More">
+                        <MoreHorizontal size={18} />
                       </button>
                     </div>
                   </div>
@@ -694,84 +662,9 @@ export default function CheckInTaskDetail({
             </div>
 
             <button type="button" className="ci-add-comment-row" onClick={() => setIsComposerOpen(true)}>
-              <img src="https://i.pravatar.cc/64?img=12" alt="" className="ci-add-comment-avatar" />
+              <span className="ci-add-comment-avatar" />
               <span className="ci-add-comment-placeholder">Add a comment...</span>
             </button>
-          </>
-        ) : subTab === "analytics" ? (
-          <>
-            {analyticsLoading && <div className="ci-an-state">Loading analytics…</div>}
-            {!analyticsLoading && analyticsError && <div className="ci-an-state error">{analyticsError}</div>}
-            {!analyticsLoading && !analyticsError && analyticsLoaded && analytics.length === 0 && (
-              <div className="ci-an-state">No analytics for this task yet.</div>
-            )}
-            <div className="ci-an-list">
-              {analytics.map((a) => {
-                const rate = Math.max(0, Math.min(100, Number(a.completionRate) || 0));
-                return (
-                  <div key={a.id} className="ci-an-card">
-                    <div className="ci-an-head">
-                      <span className="ci-an-week">{formatWeek(a.weekStart, a.weekEnd)}</span>
-                      <span className="ci-an-done">{a.totalCompletedTasks ?? 0} completed</span>
-                    </div>
-
-                    <div className="ci-an-rate-row">
-                      <div className="ci-an-bar">
-                        <div className="ci-an-bar-fill" style={{ width: `${rate}%` }} />
-                      </div>
-                      <span className="ci-an-rate">{rate}%</span>
-                    </div>
-
-                    {a.remark && <p className="ci-an-remark">{a.remark}</p>}
-
-                    {a.insights?.length > 0 && (
-                      <>
-                        <div className="ci-an-section-title">Insights</div>
-                        <ul className="ci-an-ul">
-                          {a.insights.map((t, i) => (
-                            <li key={i}>{t}</li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
-
-                    {a.recommendations?.length > 0 && (
-                      <>
-                        <div className="ci-an-section-title">Recommendations</div>
-                        <ul className="ci-an-ul">
-                          {a.recommendations.map((t, i) => (
-                            <li key={i}>{t}</li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
-
-                    {a.riskOverdueTasks?.length > 0 && (
-                      <>
-                        <div className="ci-an-section-title">At risk / overdue</div>
-                        {a.riskOverdueTasks.map((r, i) => (
-                          <div key={r.taskId || i} className="ci-an-risk">
-                            <b>{r.title}</b> — {r.reason}
-                          </div>
-                        ))}
-                      </>
-                    )}
-
-                    {a.pendingTasks?.length > 0 && (
-                      <>
-                        <div className="ci-an-section-title">Pending</div>
-                        {a.pendingTasks.map((r, i) => (
-                          <div key={r.taskId || i} className="ci-an-risk">
-                            {r.title}
-                            <span className="ci-an-pending-pill">{PENDING_LABELS[r.status] || r.status}</span>
-                          </div>
-                        ))}
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
           </>
         ) : (
           <div className="ci-wl">
@@ -834,7 +727,7 @@ export default function CheckInTaskDetail({
               className="ci-composer-submit-btn"
               disabled={!draft.trim()}
               style={{
-                background: draft.trim() ? "#1CA7D0" : "#eceef0",
+                background: draft.trim() ? "#0C93CF" : "#eceef0",
                 color: draft.trim() ? "#fff" : "#8a97a0",
                 cursor: draft.trim() ? "pointer" : "not-allowed",
               }}
@@ -883,7 +776,7 @@ export default function CheckInTaskDetail({
               className="ci-composer-submit-btn"
               disabled={!titleDraft.trim()}
               style={{
-                background: titleDraft.trim() ? "#1CA7D0" : "#eceef0",
+                background: titleDraft.trim() ? "#0C93CF" : "#eceef0",
                 color: titleDraft.trim() ? "#fff" : "#8a97a0",
                 cursor: titleDraft.trim() ? "pointer" : "not-allowed",
               }}
@@ -911,7 +804,6 @@ export default function CheckInTaskDetail({
             </div>
 
             <div className="ci-assign-search">
-              <Plus size={0} />
               <input
                 type="text"
                 placeholder="Search team member"
@@ -922,7 +814,7 @@ export default function CheckInTaskDetail({
 
             <div className="ci-assign-list">
               {filteredTeamPool.map((member) => {
-                const isAdded = assignees.some((a) => a.id === member.id);
+                const isAdded = assignees.some((a) => a.userId === member.userId);
                 return (
                   <button
                     key={member.id}

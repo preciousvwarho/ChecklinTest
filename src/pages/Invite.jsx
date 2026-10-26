@@ -20,17 +20,17 @@ const STYLES = `
   .ci-inv-sub { font-size: 13px; color: #6b7680; margin: -6px 0 6px; }
   .ci-inv-item { background: #fff; border-radius: 16px; padding: 18px; display: flex; flex-direction: column; gap: 14px; box-shadow: 0 1px 2px rgba(20,27,31,0.04); }
   .ci-inv-org { display: flex; align-items: center; gap: 12px; }
-  .ci-inv-logo { width: 44px; height: 44px; border-radius: 12px; background: #e3f4fb; color: #1CA7D0; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .ci-inv-logo { width: 44px; height: 44px; border-radius: 12px; background: #E7F4FA; color: #0C93CF; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
   .ci-inv-name { font-size: 15px; font-weight: 700; color: #141b1f; }
   .ci-inv-meta { font-size: 12px; color: #8a97a0; margin-top: 2px; }
   .ci-inv-actions { display: flex; gap: 10px; }
   .ci-inv-btn { flex: 1; border-radius: 999px; padding: 11px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
-  .ci-inv-btn.accept { border: none; background: #1CA7D0; color: #fff; }
+  .ci-inv-btn.accept { border: none; background: #0C93CF; color: #fff; }
   .ci-inv-btn.decline { border: 1px solid #dfe3e6; background: #fff; color: #4a565d; }
   .ci-inv-btn:disabled { opacity: 0.6; cursor: default; }
   .ci-inv-error { font-size: 12.5px; color: #d64545; }
   .ci-inv-state { text-align: center; font-size: 13.5px; color: #6b7680; padding: 24px 0; }
-  .ci-inv-link { align-self: center; border: none; background: none; color: #1CA7D0; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .ci-inv-link { align-self: center; border: none; background: none; color: #0C93CF; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; }
 `;
 
 export default function Invite() {

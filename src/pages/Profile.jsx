@@ -26,27 +26,27 @@ const STYLES = `
   .ci-pf { width: 660px; max-width: 100%; }
   .ci-pf-back { display: none; border: none; background: none; cursor: pointer; padding: 0; margin-bottom: 14px; color: #141b1f; }
 
-  .ci-pf-cover { height: 133px; border-radius: 16px; background: #0b93d0; }
+  .ci-pf-cover { height: 133px; border-radius: 16px; background: #0C93CF; }
   .ci-pf-id { display: flex; flex-direction: column; align-items: center; text-align: center; }
   .ci-pf-avatar {
-    width: 74px; height: 74px; border-radius: 50%; background: #d3eefc; border: 8px solid #fff; box-sizing: content-box;
+    width: 74px; height: 74px; border-radius: 50%; background: #C5E5F4; border: 8px solid #fff; box-sizing: content-box;
     margin-top: -45px; display: flex; align-items: center; justify-content: center; overflow: hidden;
     font-size: 16px; font-weight: 500; color: #25303a; letter-spacing: 5px; text-indent: 5px;
   }
   .ci-pf-avatar-wrap { position: relative; cursor: pointer; margin-top: -45px; display: block; }
   .ci-pf-avatar-wrap .ci-pf-avatar { margin-top: 0; }
-  .ci-pf-avatar-cam { position: absolute; right: 8px; bottom: 8px; width: 24px; height: 24px; border-radius: 50%; background: #1CA7D0; color: #fff; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .ci-pf-avatar-cam { position: absolute; right: 8px; bottom: 8px; width: 24px; height: 24px; border-radius: 50%; background: #0C93CF; color: #fff; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; }
   .ci-pf-avatar img { width: 100%; height: 100%; object-fit: cover; }
   .ci-pf-name { font-size: 18px; font-weight: 500; color: #1d252b; margin-top: 12px; line-height: 1.3; }
   .ci-pf-role { font-size: 12px; font-weight: 400; color: #cdd2d6; margin-top: 4px; }
   .ci-pf-edit {
-    margin-top: 12px; height: 24px; padding: 0 14px; border: 1px solid #1CA7D0; background: #fff; color: #1CA7D0;
+    margin-top: 12px; height: 24px; padding: 0 14px; border: 1px solid #0C93CF; background: #fff; color: #0C93CF;
     border-radius: 999px; font-family: inherit; font-size: 9.5px; font-weight: 500; cursor: pointer;
   }
 
   .ci-pf-section { margin-top: 50px; }
   .ci-pf-section.first { margin-top: 40px; }
-  .ci-pf-section-title { height: 45px; display: flex; align-items: center; background: #f4f9fe; color: #5b6870; font-size: 15px; font-weight: 500; padding: 0 42px; }
+  .ci-pf-section-title { height: 45px; display: flex; align-items: center; background: #F1F9FC; color: #5b6870; font-size: 15px; font-weight: 500; padding: 0 42px; }
   .ci-pf-item {
     display: flex; align-items: center; width: 100%; height: 54px; border: none; background: none; cursor: pointer;
     padding: 0 12px 0 55px; font-family: inherit; text-align: left; color: #141b1f;
@@ -57,7 +57,7 @@ const STYLES = `
 
   .ci-pf-toggle { width: 27px; height: 14px; border-radius: 999px; background: #a8a8a8; position: relative; flex-shrink: 0; margin-right: 8px; transition: background 0.15s ease; }
   .ci-pf-toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 10px; height: 10px; border-radius: 50%; background: #fff; transition: transform 0.15s ease; }
-  .ci-pf-toggle.on { background: #86cdeb; }
+  .ci-pf-toggle.on { background: #0C93CF; }
   .ci-pf-toggle.on::after { transform: translateX(13px); }
 
   .ci-pf-logout { margin: 34px 0 0 55px; border: none; background: none; color: #d64545; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 10px; cursor: pointer; font-family: inherit; padding: 0; }
@@ -67,14 +67,14 @@ const STYLES = `
   .ci-pf-modal-head { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 600; color: #141b1f; }
   .ci-pf-modal-head button { border: none; background: none; cursor: pointer; color: #6b7680; display: flex; padding: 4px; }
   .ci-pf-photo { align-self: center; position: relative; cursor: pointer; }
-  .ci-pf-photo-circle { width: 84px; height: 84px; border-radius: 50%; background: #d3eefc; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 500; color: #25303a; overflow: hidden; }
+  .ci-pf-photo-circle { width: 84px; height: 84px; border-radius: 50%; background: #C5E5F4; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 500; color: #25303a; overflow: hidden; }
   .ci-pf-photo-circle img { width: 100%; height: 100%; object-fit: cover; }
-  .ci-pf-photo-cam { position: absolute; right: 0; bottom: 0; width: 26px; height: 26px; border-radius: 50%; background: #1CA7D0; color: #fff; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; }
+  .ci-pf-photo-cam { position: absolute; right: 0; bottom: 0; width: 26px; height: 26px; border-radius: 50%; background: #0C93CF; color: #fff; border: 2px solid #fff; display: flex; align-items: center; justify-content: center; }
   .ci-pf-field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: #5b6870; }
   .ci-pf-field input { border: 1px solid #dfe3e6; border-radius: 10px; padding: 11px 14px; font-size: 13px; font-family: inherit; color: #141b1f; outline: none; }
-  .ci-pf-field input:focus { border-color: #1CA7D0; box-shadow: 0 0 0 3px rgba(28,167,208,0.12); }
+  .ci-pf-field input:focus { border-color: #0C93CF; box-shadow: 0 0 0 3px rgba(12,147,207,0.12); }
   .ci-pf-error { font-size: 12px; color: #d64545; }
-  .ci-pf-save { border: none; background: #1CA7D0; color: #fff; font-family: inherit; font-size: 13px; font-weight: 600; border-radius: 999px; padding: 12px; cursor: pointer; }
+  .ci-pf-save { border: none; background: #0C93CF; color: #fff; font-family: inherit; font-size: 13px; font-weight: 600; border-radius: 999px; padding: 12px; cursor: pointer; }
   .ci-pf-save:disabled { opacity: 0.6; cursor: default; }
 
   @media (max-width: 1100px) { .ci-pf-pane { margin-left: 24px; padding-right: 32px; width: 600px; } }

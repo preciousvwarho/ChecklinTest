@@ -53,11 +53,11 @@ export default function CheckInCompanyName({ onNext, onBack }) {
       <style>{`
         * { box-sizing: border-box; }
         .ci-btn { transition: background 0.15s ease, transform 0.05s ease; }
-        .ci-btn:not(:disabled):hover { background: #1691b6 !important; }
+        .ci-btn:not(:disabled):hover { background: #0A74A5 !important; }
         .ci-btn:not(:disabled):active { transform: scale(0.99); }
-        .ci-input:focus-within { border-color: #1CA7D0 !important; box-shadow: 0 0 0 3px rgba(28,167,208,0.15); }
+        .ci-input:focus-within { border-color: #0C93CF !important; box-shadow: 0 0 0 3px rgba(12,147,207,0.15); }
         .ci-back:hover { background: #f0f2f3 !important; }
-        .ci-checkbox { accent-color: #1CA7D0; }
+        .ci-checkbox { accent-color: #0C93CF; }
 
         @media (max-width: 480px) {
           .ci-card { padding: 32px 20px 0 !important; box-shadow: none !important; }
@@ -87,7 +87,7 @@ export default function CheckInCompanyName({ onNext, onBack }) {
             className="ci-btn"
             style={{
               ...styles.nextBtn,
-              background: isComplete && !loading ? "#1CA7D0" : "#d3d8db",
+              background: isComplete && !loading ? "#0C93CF" : "#d3d8db",
               cursor: isComplete && !loading ? "pointer" : "not-allowed",
             }}
             type="button"
@@ -158,7 +158,7 @@ const styles = {
   },
   progressFill: {
     height: "100%",
-    background: "#1CA7D0",
+    background: "#0C93CF",
     borderRadius: 2,
     transition: "width 0.25s ease",
   },

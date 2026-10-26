@@ -10,18 +10,18 @@ npm run dev
 ## Structure
 
 src/
-  pages/
-    SignIn.jsx            sign-in / email entry
-    VerifyOtp.jsx          OTP verification
-    CompanyName.jsx        onboarding step 1/5 — company/team name
-    PermissionRole.jsx     onboarding step 2/5 — permission role
-    InviteTeam.jsx          onboarding step 3/5 — invite teammates
-    ProjectSetup.jsx       onboarding step 5/5 — project name + description
-    Congratulations.jsx    onboarding complete
-    Home.jsx               dashboard — projects grid + create-project modal
-    ProjectDetail.jsx      single project view — task board + team panel
-  App.jsx                 dev-only screen switcher (top nav bar) so every
-                           screen can be previewed without a router yet
+pages/
+SignIn.jsx sign-in / email entry
+VerifyOtp.jsx OTP verification
+CompanyName.jsx onboarding step 1/5 — company/team name
+PermissionRole.jsx onboarding step 2/5 — permission role
+InviteTeam.jsx onboarding step 3/5 — invite teammates
+ProjectSetup.jsx onboarding step 5/5 — project name + description
+Congratulations.jsx onboarding complete
+Home.jsx dashboard — projects grid + create-project modal
+ProjectDetail.jsx single project view — task board + team panel
+App.jsx dev-only screen switcher (top nav bar) so every
+screen can be previewed without a router yet
 
 ## Notes for wiring it up for real
 

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { X, Plus, Search, Calendar } from "lucide-react";
 import AppShell from "../components/AppShell";
-import { getOrganizations, getProjects, createProject as apiCreateProject } from "../lib/api";
+import { getOrganizations, getProjects, getProjectMembers, createProject as apiCreateProject } from "../lib/api";
+import { personImage, personName } from "../lib/people";
 import { getAuthToken, pickActiveOrgRow } from "../lib/session";
 
 function ProgressTrack({ done, total }) {
@@ -21,17 +22,25 @@ function ProgressTrack({ done, total }) {
   );
 }
 
-// Overlapping avatar-stack with a trailing "+N" badge for extra members,
-// e.g. two faint filler circles then a solid "+8" circle.
-function MemberStack({ extraCount }) {
+// Overlapping avatar-stack: up to three member circles (photo when available,
+// faded blue otherwise), then a "+N" badge for the remaining members.
+function MemberStack({ members = [] }) {
+  const shown = members.slice(0, 3);
+  const extra = members.length - shown.length;
   return (
     <div className="ci-member-stack">
-      <span className="ci-member-avatar ci-member-avatar-1" />
-      <span className="ci-member-avatar ci-member-avatar-2" />
-      <span className="ci-member-avatar ci-member-count">+{extraCount}</span>
+      {shown.map((m, i) => (
+        <span key={m.id || i} className={`ci-member-avatar ci-member-avatar-${i + 1}`} title={m.name}>
+          {m.image && <img src={m.image} alt={m.name} className="ci-member-img" />}
+        </span>
+      ))}
+      {extra > 0 && <span className="ci-member-avatar ci-member-count">+{extra}</span>}
     </div>
   );
 }
+
+// Maps a project member from GET /v1/projects/members into what the stack needs.
+const toStackMember = (m) => ({ id: m.id, name: personName(m), image: personImage(m) });
 
 // Today's date as "YYYY-MM-DD", in the user's local timezone (not UTC —
 // toISOString() alone would roll over to tomorrow for anyone west of GMT
@@ -65,10 +74,7 @@ export default function CheckInHome({ onOpenProject }) {
     checkinDate: p.checkInTime,
     done: p.completedTasks ?? 0,
     total: p.totalTasks ?? 0,
-    // UI-only placeholder for the "+N" member-stack badge shown on the
-    // card. The API doesn't return team/member data yet, so this falls
-    // back to a fixed number until there's a real field to read.
-    extraMembers: p.extraMembers ?? p.memberCount ?? 8,
+    members: [],
   });
 
   // On mount: find the user's organization, then load its projects.
@@ -95,7 +101,19 @@ export default function CheckInHome({ onOpenProject }) {
         const projectsResult = await getProjects({ organizationId: orgId, page: 1, limit: 50, token });
         console.log("[Home] getProjects response:", projectsResult);
 
-        setProjects((projectsResult.data || []).map((p) => ({ ...toCardProject(p), organizationId: orgId })));
+        const cards = (projectsResult.data || []).map((p) => ({ ...toCardProject(p), organizationId: orgId }));
+        setProjects(cards);
+
+        // Load each project's real members so the cards can show their photos and count.
+        cards.forEach(async (card) => {
+          try {
+            const res = await getProjectMembers({ organizationId: orgId, projectId: card.id, token });
+            const members = (res?.data || []).map(toStackMember);
+            setProjects((prev) => prev.map((x) => (x.id === card.id ? { ...x, members } : x)));
+          } catch (err) {
+            console.error("[Home] getProjectMembers failed:", err);
+          }
+        });
       } catch (err) {
         console.error("[Home] failed to load projects:", err);
         setError(err.message || "Could not load projects.");
@@ -157,54 +175,57 @@ export default function CheckInHome({ onOpenProject }) {
     <AppShell>
       <style>{`
         .ci-content-inner { padding: 40px 48px 60px; width: 100%; margin: 0 auto; }
-        .ci-page-title { font-size: 26px; font-weight: 800; color: #141b1f; margin: 0 0 20px; line-height: 1.3; }
+        .ci-page-title { font-size: 26px; font-weight: 500; color: #141b1f; margin: 0 0 20px; line-height: 1.3; }
 
         .ci-search {
-          display: flex; align-items: center; gap: 12px; border: 1px solid #e6e9eb;
-          border-radius: 999px; padding: 12px 18px; background: #fff; width: 100%; margin-bottom: 32px;
+          display: flex; align-items: center; gap: 12px; border: 1px solid #DBDBDB;
+          border-radius: 999px; padding: 12px 10px; background: #fff; width: 100%; margin-bottom: 32px;
         }
-        .ci-search:focus-within { border-color: #1CA7D0; box-shadow: 0 0 0 3px rgba(28,167,208,0.12); }
+        .ci-search:focus-within { border-color: #0C93CF; box-shadow: 0 0 0 3px rgba(12,147,207,0.12); }
         .ci-search-icon-wrap {
-          display: flex; align-items: center; justify-content: center; width: 22px; height: 22px;
-          border-radius: 50%; border: 1px solid #dfe3e6; flex-shrink: 0;
+          display: flex; align-items: center; justify-content: center; width: 32px; height: 32px;
+          border-radius: 50%; border: 1px solid #DBDBDB; flex-shrink: 0;
         }
         .ci-search-input { flex: 1; border: none; outline: none; font-size: 13.5px; color: #141b1f; background: transparent; }
         .ci-search-input::placeholder { color: #b3bcc2; }
 
         .ci-projects-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 30px; }
         .ci-project-card {
-          border: 1px solid #ecefef; border-radius: 18px; padding: 26px 26px 28px; background: #fff;
+          border: 1px solid #DBDBDB; border-radius: 18px; padding: 26px 26px 28px; background: #fff;
           transition: box-shadow 0.15s ease, border-color 0.15s ease;
         }
         .ci-project-card:hover { box-shadow: 0 4px 14px rgba(16,24,32,0.08); border-color: #dfe3e6; }
-        .ci-project-name { font-size: 22px; font-weight: 700; color: #141b1f; margin-bottom: 28px; }
+        .ci-project-name { font-size: 22px; font-weight: 400; color: #141b1f; margin-bottom: 28px; }
 
         .ci-progress-block { margin-bottom: 22px; }
         .ci-progress-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
         .ci-progress-label { font-size: 13px; color: #8a97a0; }
         .ci-progress-fraction { font-size: 13px; color: #8a97a0; font-weight: 600; }
         .ci-progress-track { position: relative; width: 100%; height: 6px; border-radius: 999px; background: #e6e9eb; overflow: hidden; }
-        .ci-progress-fill { height: 100%; border-radius: 999px; background: #1CA7D0; }
+        .ci-progress-fill { height: 100%; border-radius: 999px; background: #0C93CF; }
 
         .ci-member-stack { display: flex; align-items: center; }
         .ci-member-avatar {
-          width: 34px; height: 34px; border-radius: 50%; border: 2px solid #fff;
+          width: 30px; height: 30px; border-radius: 50%; border: none;
           display: flex; align-items: center; justify-content: center;
+          overflow: hidden; box-sizing: border-box; position: relative;
         }
-        .ci-member-avatar-1 { background: #d6eef6; margin-left: 0; }
-        .ci-member-avatar-2 { background: #8fd3e8; margin-left: -12px; }
+        .ci-member-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .ci-member-avatar-1 { background: #D3EBFD; margin-left: 0; z-index: 1; }
+        .ci-member-avatar-2 { background: #B5DDFA; margin-left: -14px; z-index: 2; }
+        .ci-member-avatar-3 { background: #A3D4F8; margin-left: -14px; z-index: 3; }
         .ci-member-count {
-          background: #3ab6dd; color: #fff; font-size: 11.5px; font-weight: 700;
-          margin-left: -12px; position: relative; z-index: 1;
+          background: #5BB4FF; color: #fff; font-size: 10px; font-weight: 500;
+          margin-left: -14px; z-index: 4;
         }
 
         .ci-fab {
           position: fixed; right: 32px; bottom: 32px; width: 52px; height: 52px; border-radius: 50%;
-          background: #1CA7D0; border: none; display: flex; align-items: center; justify-content: center;
-          cursor: pointer; box-shadow: 0 6px 16px rgba(28,167,208,0.35); z-index: 15;
+          background: #0C93CF; border: none; display: flex; align-items: center; justify-content: center;
+          cursor: pointer; box-shadow: 0 6px 16px rgba(12,147,207,0.35); z-index: 15;
           transition: background 0.15s ease, transform 0.1s ease;
         }
-        .ci-fab:hover { background: #1691b6; transform: scale(1.05); }
+        .ci-fab:hover { background: #0A74A5; transform: scale(1.05); }
 
         /* ---------- create-project modal ---------- */
         .ci-modal-overlay {
@@ -230,7 +251,7 @@ export default function CheckInHome({ onOpenProject }) {
           font-size: 13.5px; color: #141b1f; font-family: inherit; outline: none;
         }
         .ci-field-input:focus, .ci-field-textarea:focus, .ci-date-box:focus-within {
-          border-color: #1CA7D0; box-shadow: 0 0 0 3px rgba(28,167,208,0.12);
+          border-color: #0C93CF; box-shadow: 0 0 0 3px rgba(12,147,207,0.12);
         }
         .ci-field-textarea { min-height: 90px; resize: vertical; }
         .ci-date-box { border: 1px solid #dfe3e6; border-radius: 9px; padding: 10px 14px; }
@@ -257,7 +278,7 @@ export default function CheckInHome({ onOpenProject }) {
 
         <div className="ci-search">
           <span className="ci-search-icon-wrap">
-            <Search size={12} color="#8a97a0" />
+            <Search style={{width:'15px'}} size={18} color="#DBDBDB" />
           </span>
           <input type="text" placeholder="Search" className="ci-search-input" />
         </div>
@@ -284,7 +305,7 @@ export default function CheckInHome({ onOpenProject }) {
               >
                 <div className="ci-project-name">{p.name}</div>
                 <ProgressTrack done={p.done} total={p.total} />
-                <MemberStack extraCount={p.extraMembers} />
+                <MemberStack members={p.members} />
               </div>
             ))}
           </div>
@@ -333,7 +354,7 @@ export default function CheckInHome({ onOpenProject }) {
                 <div className="ci-date-row">
                   <Calendar size={15} color="#8a97a0" />
                   <input
-                    type="date"
+                    type="time"
                     className="ci-date-input"
                     value={checkinDate}
                     onChange={(e) => setCheckinDate(e.target.value)}
@@ -347,7 +368,7 @@ export default function CheckInHome({ onOpenProject }) {
               type="button"
               disabled={!canCreate || creating}
               style={{
-                background: canCreate && !creating ? "#1CA7D0" : "#eceef0",
+                background: canCreate && !creating ? "#0C93CF" : "#eceef0",
                 color: canCreate && !creating ? "#fff" : "#8a97a0",
                 cursor: canCreate && !creating ? "pointer" : "not-allowed",
               }}

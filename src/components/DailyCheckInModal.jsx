@@ -6,7 +6,7 @@ const STYLES = `
   .ci-dc-overlay { position: fixed; inset: 0; background: rgba(20,27,31,0.55); z-index: 120; display: flex; align-items: center; justify-content: center; padding: 16px; font-family: "Poppins", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
   .ci-dc { position: relative; width: 100%; max-width: 400px; max-height: calc(100vh - 32px); background: #fff; border-radius: 28px; overflow: hidden; display: flex; flex-direction: column; }
   .ci-dc-bar { height: 2px; background: #e6e8ea; flex-shrink: 0; }
-  .ci-dc-bar > span { display: block; height: 100%; background: #0b93d0; transition: width 0.25s ease; }
+  .ci-dc-bar > span { display: block; height: 100%; background: #0C93CF; transition: width 0.25s ease; }
   .ci-dc-close { position: absolute; top: 14px; right: 14px; width: 28px; height: 28px; border: none; background: #f3f5f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #6b7680; padding: 0; }
   .ci-dc-body { padding: 36px 24px 22px; display: flex; flex-direction: column; min-height: 0; overflow-y: auto; }
   .ci-dc-title { font-size: 25px; font-weight: 700; line-height: 1.25; color: #0f1417; margin: 0 0 22px; }
@@ -14,7 +14,7 @@ const STYLES = `
   .ci-dc-list.scroll { max-height: 188px; overflow-y: auto; }
   .ci-dc-task { display: flex; align-items: center; gap: 12px; width: 100%; background: #fff; border: 1px solid #c9cdd1; border-radius: 12px; padding: 10px 14px; text-align: left; font-family: inherit; }
   button.ci-dc-task { cursor: pointer; }
-  .ci-dc-task.selected { border-color: #1CA7D0; background: #f5fbfe; }
+  .ci-dc-task.selected { border-color: #0C93CF; background: #F1F9FC; }
   .ci-dc-date { display: flex; flex-direction: column; align-items: center; justify-content: center; min-width: 38px; padding-right: 12px; border-right: 1px solid #d5d9dc; align-self: stretch; color: #3b454c; }
   .ci-dc-date b { font-size: 18px; font-weight: 400; line-height: 1.1; }
   .ci-dc-date span { font-size: 10px; }
@@ -24,9 +24,9 @@ const STYLES = `
   .ci-dc-pill { background: #f5890a; color: #fff; font-size: 8.5px; font-weight: 500; border-radius: 999px; padding: 3px 10px; flex-shrink: 0; white-space: nowrap; }
   .ci-dc-label { font-size: 11px; font-weight: 500; color: #141b1f; margin: 18px 0 8px; }
   .ci-dc-text { width: 100%; height: 112px; resize: none; border: 1px solid #c9cdd1; border-radius: 10px; padding: 12px 14px; font-family: inherit; font-size: 12.5px; color: #141b1f; outline: none; }
-  .ci-dc-text:focus { border-color: #1CA7D0; }
+  .ci-dc-text:focus { border-color: #0C93CF; }
   .ci-dc-btn { margin-top: 18px; width: 100%; border: none; border-radius: 10px; background: #e8e8e8; color: #3b454c; font-family: inherit; font-size: 14px; font-weight: 600; padding: 15px; cursor: pointer; transition: background 0.15s ease, color 0.15s ease; }
-  .ci-dc-btn.ready { background: #1CA7D0; color: #fff; }
+  .ci-dc-btn.ready { background: #0C93CF; color: #fff; }
   .ci-dc-btn:disabled { cursor: default; opacity: 0.85; }
   .ci-dc-spacer { flex: 1; min-height: 40px; }
   .ci-dc-back { align-self: center; margin-top: 12px; border: none; background: none; color: #6b7680; font-family: inherit; font-size: 12px; cursor: pointer; }

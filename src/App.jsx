@@ -16,8 +16,6 @@ import Invite from "./pages/Invite";
 import { getOrganizations, getInvitations } from "./lib/api";
 import { getAuthToken, getSession, pickActiveOrgRow } from "./lib/session";
 import { pendingInvitesFor } from "./pages/Invite";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import DeleteAccount from "./pages/DeleteAccount";
 
 // After ANY successful sign-in (Google or email/OTP), decide whether this
 // person is a first-timer who still needs onboarding, or an existing user
@@ -230,9 +228,6 @@ export default function App() {
       <Routes>
         {/* Landing page is Sign In (login) */}
         <Route path="/" element={<SignInRoute />} />
-
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="/delete-account" element={<DeleteAccount />} />
 
         <Route path="/verify-otp" element={<VerifyOtpRoute />} />
 

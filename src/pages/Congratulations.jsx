@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 
-const CONFETTI_COLORS = ["#1CA7D0", "#7FD8C4", "#FFC96B", "#FF9E9E", "#5FE0B7"];
+const CONFETTI_COLORS = ["#0C93CF", "#7FD8C4", "#FFC96B", "#FF9E9E", "#5FE0B7"];
 
 function randomBetween(min, max) {
   return Math.random() * (max - min) + min;
@@ -40,7 +40,7 @@ export default function CheckInCongratulations({ projectName = "Budget", onNext 
           50% { transform: translateY(-10px) rotate(calc(var(--rot) + 12deg)); }
         }
         .ci-next-btn { transition: background 0.15s ease, transform 0.05s ease; }
-        .ci-next-btn:hover { background: #1691b6; }
+        .ci-next-btn:hover { background: #0A74A5; }
         .ci-next-btn:active { transform: scale(0.99); }
 
         @media (prefers-reduced-motion: reduce) {
@@ -133,7 +133,7 @@ const styles = {
   },
   nextBtn: {
     width: "100%",
-    background: "#1CA7D0",
+    background: "#0C93CF",
     color: "#fff",
     border: "none",
     borderRadius: 9,

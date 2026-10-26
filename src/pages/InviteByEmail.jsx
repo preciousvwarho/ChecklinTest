@@ -83,10 +83,10 @@ export default function CheckInInviteByEmail({ companyName = "Ptesh", organizati
       <style>{`
         * { box-sizing: border-box; }
         .ci-btn { transition: background 0.15s ease, transform 0.05s ease; }
-        .ci-btn:not(:disabled):hover { background: #1691b6 !important; }
+        .ci-btn:not(:disabled):hover { background: #0A74A5 !important; }
         .ci-btn:not(:disabled):active { transform: scale(0.99); }
         .ci-back:hover { background: #f0f2f3 !important; }
-        .ci-input:focus-within { border-color: #1CA7D0 !important; box-shadow: 0 0 0 3px rgba(28,167,208,0.15); }
+        .ci-input:focus-within { border-color: #0C93CF !important; box-shadow: 0 0 0 3px rgba(12,147,207,0.15); }
 
         @media (max-width: 480px) {
           .ci-card { padding: 32px 20px 0 !important; }
@@ -135,7 +135,7 @@ export default function CheckInInviteByEmail({ companyName = "Ptesh", organizati
             className="ci-btn"
             style={{
               ...styles.nextBtn,
-              background: isComplete && !loading ? "#1CA7D0" : "#d3d8db",
+              background: isComplete && !loading ? "#0C93CF" : "#d3d8db",
               cursor: isComplete && !loading ? "pointer" : "not-allowed",
               marginTop: 20,
             }}
@@ -192,7 +192,7 @@ const styles = {
   },
   progressFill: {
     height: "100%",
-    background: "#1CA7D0",
+    background: "#0C93CF",
     borderRadius: 2,
     transition: "width 0.25s ease",
   },
@@ -245,9 +245,9 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: 4,
-    background: "#f2fafc",
-    color: "#1CA7D0",
-    border: "1px solid #cdeaf2",
+    background: "#F1F9FC",
+    color: "#0C93CF",
+    border: "1px solid #C5E5F4",
     borderRadius: 6,
     padding: "3px 6px 3px 10px",
     fontSize: 12.5,
@@ -259,7 +259,7 @@ const styles = {
     justifyContent: "center",
     background: "transparent",
     border: "none",
-    color: "#1CA7D0",
+    color: "#0C93CF",
     cursor: "pointer",
     padding: 2,
   },
