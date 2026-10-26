@@ -19,7 +19,7 @@ async function request(path, { method = "GET", body, token } = {}) {
     console.error(`[api] ${method} ${path} network error:`, networkErr);
     throw new Error("Network error. Please check your connection and try again.");
   }
-
+   
   let data = null;
   try {
     data = await res.json();
