@@ -3,7 +3,7 @@ import { ArrowLeft, Building2 } from "lucide-react";
 import { createOrganization } from "../lib/api";
 import { getAuthToken } from "../lib/session";
 
-/**
+/**     
  * Shared onboarding progress header — back arrow + full-width progress bar.
  * Sits outside/above the card, spanning the full page width.
  * Reused across all "step" screens in the CheckIn onboarding flow.
