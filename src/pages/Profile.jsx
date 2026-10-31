@@ -248,7 +248,7 @@ export default function Profile() {
     { icon: Building2, label: "Organisation" },
     { icon: UserCog, label: "Organisation Members" },
     { icon: UserCog, label: "Invitations" },
-    { icon: RefreshCcwDot, label: "Subscription Plan" },
+    { icon: RefreshCcwDot, label: "Subscription Plan", path: "/subscription-plan" },
   ];
 
   const isAdmin = !roleName || /admin/i.test(roleName);
@@ -281,8 +281,8 @@ export default function Profile() {
         {isAdmin && (
           <div className="ci-pf-section first">
             <div className="ci-pf-section-title">Administrator</div>
-            {adminItems.map(({ icon: Icon, label }) => (
-              <button key={label} type="button" className="ci-pf-item">
+            {adminItems.map(({ icon: Icon, label, path }) => (
+              <button key={label} type="button" className="ci-pf-item" onClick={() => path && navigate(path)}>
                 <Icon size={20} strokeWidth={2} />
                 <span className="ci-pf-item-label">{label}</span>
                 <ChevronRight size={18} strokeWidth={2.4} />

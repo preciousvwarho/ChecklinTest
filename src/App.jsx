@@ -13,6 +13,7 @@ import Activities from "./pages/Activities";
 import Dms from "./pages/Dms";
 import Profile from "./pages/Profile";
 import Invite from "./pages/Invite";
+import SubscriptionPlan, { PlanDuration } from "./pages/SubscriptionPlan";
 import { getOrganizations, getInvitations } from "./lib/api";
 import { getAuthToken, getSession, pickActiveOrgRow } from "./lib/session";
 import { pendingInvitesFor } from "./pages/Invite";
@@ -241,6 +242,8 @@ export default function App() {
         <Route path="/activities" element={<Activities />} />
         <Route path="/invite" element={<Invite />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/subscription-plan" element={<SubscriptionPlan />} />
+        <Route path="/subscription-plan/duration" element={<PlanDuration />} />
         <Route path="/dms" element={<Dms />} />
         <Route path="/dms/:conversationId" element={<Dms />} />
         <Route path="/project/:projectId" element={<ProjectDetailRoute />} />

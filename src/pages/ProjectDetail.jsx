@@ -24,9 +24,9 @@ import {
   getAnalyticsOverview,
   inviteTeamMembers,
   getProjectConversation,
-  sendConversationMessage,
 } from "../lib/api";
 import { getAuthToken } from "../lib/session";
+import { connectSocket, emitWithAck } from "../lib/socket";
 import { personName, personImage } from "../lib/people";
 
 const TABS = [
@@ -346,24 +346,20 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
     };
   }, [loading, projectId, checkInTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Posts the check-in to the project's group chat.
+  // Posts the check-in to the project's group chat over the socket. The server
+  // adds the user's IN_PROGRESS tasks itself; one check-in per project per day.
   const submitCheckIn = async ({ blocker, focusTasks }) => {
-    const token = getAuthToken();
-    const conv = chat || (await getProjectConversation({ projectId, organizationId, token })).data;
-    const lines = ["Daily check-in"];
-    lines.push(`Blockers: ${blocker || "None"}`);
-    lines.push(`Focusing on: ${focusTasks.map((t) => t.title).join(", ")}`);
-    await sendConversationMessage({
-      conversationId: conv.id,
-      organizationId,
-      content: lines.join("\n"),
-      checkIn: {
-        blocker,
-        focusTaskIds: focusTasks.map((t) => t.id),
-        inProgressTaskIds: checkInTasks.map((t) => t.id),
-      },
-      token,
-    });
+    connectSocket({ token: getAuthToken(), organizationId });
+    try {
+      await emitWithAck("checkIn", {
+        projectId,
+        ...(blocker ? { blocker } : {}),
+        focusTasks: focusTasks.map((t) => t.id),
+      });
+    } catch (err) {
+      // Already checked in today (e.g. from another device) — treat as done.
+      if (!/already|once/i.test(err.message || "")) throw err;
+    }
     markCheckedInToday(projectId);
     setCheckInOpen(false);
   };
@@ -1203,4 +1199,4 @@ export default function CheckInProjectDetail({ projectId, organizationId, projec
       )}
     </AppShell>
   );
-}
+}

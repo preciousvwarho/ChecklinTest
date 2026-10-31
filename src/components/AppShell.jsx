@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { X, MoreVertical, Home, MessageCircle, Activity, Pencil, Plus, Menu } from "lucide-react";
 import { getOrganizations, getCurrentUser } from "../lib/api";
 import { getAuthToken, getSession, saveSession, getActiveOrgId, setActiveOrgId } from "../lib/session";
+import { useChatUnread } from "../lib/socket";
 
 export const CloudPinLogo = ({ size = 26 }) => (
   <svg width={size} height={size} viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -75,6 +76,7 @@ export default function AppShell({ activeNavId, onNavChange, children, modal }) 
   // is shown as active; everything else lists under "Other Organisations".
   const storedActiveId = getActiveOrgId();
   const activeOrg = organizations.find((o) => o.id === storedActiveId) || organizations[0];
+  const { total: unreadTotal } = useChatUnread(activeOrg?.id);
   const otherOrgs = organizations.filter((o) => o !== activeOrg);
 
   const switchOrg = (id) => {
@@ -172,6 +174,7 @@ export default function AppShell({ activeNavId, onNavChange, children, modal }) 
           border-radius: 9px; font-size: 13.5px; font-weight: 600; color: #5b6870;
           transition: background 0.15s ease; cursor: pointer;
         }
+        .ci-nav-badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: #0C93CF; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
         .ci-nav-item:hover { background: #f0f2f3; }
         .ci-nav-item.active { background: #E7F4FA; color: #0C93CF; }
         .ci-profile-row {
@@ -264,6 +267,7 @@ export default function AppShell({ activeNavId, onNavChange, children, modal }) 
                 >
                   <Icon size={17} color={isActive ? "#0C93CF" : "#5b6870"} />
                   <span>{item.label}</span>
+                  {item.id === "dms" && unreadTotal > 0 && <span className="ci-nav-badge">{unreadTotal > 99 ? "99+" : unreadTotal}</span>}
                 </div>
               );
             })}

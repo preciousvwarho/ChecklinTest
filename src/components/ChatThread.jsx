@@ -2,14 +2,13 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from "re
 import { Send, Trash2, Reply, X, FileText, Download, ClipboardCheck, Paperclip } from "lucide-react";
 import {
   getConversationMessages,
-  sendConversationMessage,
   markConversationRead,
   deleteConversationMessage,
   uploadFiles,
 } from "../lib/api";
 import { getAuthToken, getSession } from "../lib/session";
+import { emitWithAck, useSocketEvents } from "../lib/socket";
 
-const POLL_MS = 5000;
 const PAGE_SIZE = 30;
 const MAX_FILE_MB = 10;
 
@@ -120,7 +119,7 @@ const STYLES = `
 `;
 
 /**
- * Real-time-ish chat thread for any conversation (DM or project group chat).
+ * Real-time chat thread (Socket.IO) for any conversation (DM or project group chat).
  *
  * @param {Object} props
  * @param {string} props.conversationId
@@ -189,20 +188,36 @@ export default function ChatThread({
     };
   }, [conversationId, organizationId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Poll for new messages / edits (deletes, read receipts).
-  useEffect(() => {
-    if (!conversationId || !organizationId) return;
-    const id = setInterval(async () => {
-      if (document.hidden) return;
-      try {
-        const res = await fetchPage(1);
-        setMessages((prev) => mergeMessages(prev, res.data || []));
-      } catch {
-        // transient — try again next tick
-      }
-    }, POLL_MS);
-    return () => clearInterval(id);
-  }, [conversationId, organizationId]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Live updates over the socket. Each handler ignores other conversations.
+  useSocketEvents(
+    organizationId,
+    {
+      message: (m) => {
+        if (m?.conversationId !== conversationId) return;
+        setMessages((prev) => mergeMessages(prev, [m]));
+      },
+      messageDeleted: (d) => {
+        if (d?.conversationId !== conversationId) return;
+        setMessages((prev) => prev.map((x) => (x.id === d.messageId ? { ...x, deletedAt: d.deletedAt } : x)));
+      },
+      messageRead: (d) => {
+        if (d?.conversationId !== conversationId) return;
+        setMessages((prev) =>
+          prev.map((x) => {
+            if (typeof x.offset === "number" && x.offset > d.lastReadMessageOffset) return x;
+            const others = (x.readBy || []).filter((r) => r.organizationUserId !== d.organizationUserId);
+            return { ...x, readBy: [...others, { organizationUserId: d.organizationUserId, readAtOffset: d.lastReadMessageOffset }] };
+          })
+        );
+      },
+    },
+    // Back online after a drop: pull whatever was missed.
+    () => {
+      fetchPage(1)
+        .then((res) => setMessages((prev) => mergeMessages(prev, res.data || [])))
+        .catch(() => {});
+    }
+  );
 
   // Mark the conversation read when the latest message is from someone else.
   useEffect(() => {
@@ -258,17 +273,19 @@ export default function ChatThread({
         attachments = await uploadFiles(item.files || [], getAuthToken());
         item.uploaded = attachments;
       }
-      await sendConversationMessage({
+      const sent = await emitWithAck("message", {
         conversationId,
-        organizationId,
         content: item.content,
-        replyToMessageId: item.replyToMessageId,
-        attachments,
-        token: getAuthToken(),
+        ...(item.replyToMessageId ? { replyToMessageId: item.replyToMessageId } : {}),
+        ...(attachments.length ? { messageAttachments: attachments } : {}),
       });
-      const res = await fetchPage(1);
       stickRef.current = true;
-      setMessages((prev) => mergeMessages(prev, res.data || []));
+      if (sent) {
+        setMessages((prev) => {
+          const existing = prev.find((x) => x.id === sent.id);
+          return mergeMessages(prev, [{ ...sent, createdAt: sent.createdAt || existing?.createdAt || new Date().toISOString() }]);
+        });
+      }
       setPending((prev) => prev.filter((p) => p.id !== item.id));
       (item.previews || []).forEach((u) => URL.revokeObjectURL(u));
     } catch (err) {

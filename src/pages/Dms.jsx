@@ -12,8 +12,7 @@ import {
   getProjectMembers,
 } from "../lib/api";
 import { getAuthToken, getSession, pickActiveOrgRow } from "../lib/session";
-
-const LIST_POLL_MS = 15000;
+import { useSocketEvents } from "../lib/socket";
 
 function timeAgo(ts) {
   const mins = Math.max(0, Math.floor((Date.now() - new Date(ts).getTime()) / 60000));
@@ -267,9 +266,41 @@ export default function CheckInDms() {
     if (!organizationId || conversationId) return;
     setListLoading(true);
     loadList();
-    const id = setInterval(() => !document.hidden && loadList(), LIST_POLL_MS);
-    return () => clearInterval(id);
   }, [organizationId, conversationId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Live list updates over the socket (only while the list is on screen).
+  const onList = !conversationId;
+  useSocketEvents(
+    organizationId,
+    {
+      // New message: bump that row to the top with a fresh preview. Unknown
+      // conversation (or a deleted message) -> just refetch the list.
+      message: (m) => {
+        if (!onList || !m?.conversationId) return;
+        let known = false;
+        setRows((prev) => {
+          const hit = prev.find((r) => r.id === m.conversationId);
+          if (!hit) return prev;
+          known = true;
+          const updated = { ...hit, preview: m.content || "Attachment", lastAt: m.createdAt || new Date().toISOString() };
+          return [updated, ...prev.filter((r) => r.id !== hit.id)];
+        });
+        if (!known) loadList();
+      },
+      messageDeleted: () => onList && loadList(),
+      conversationAdded: (d) => {
+        // Direct conversations only (project group chats have a projectId).
+        if (onList && !d?.projectId) loadList();
+      },
+      // Authoritative unread counts from the server.
+      chatUnreadCounts: (d) => {
+        if (!onList) return;
+        const map = new Map((d?.conversations || []).map((c) => [c.conversationId, c.unreadCount]));
+        setRows((prev) => prev.map((r) => (map.has(r.id) ? { ...r, unread: map.get(r.id) } : r)));
+      },
+    },
+    () => onList && loadList()
+  );
 
   // ---------- single conversation ----------
   useEffect(() => {
